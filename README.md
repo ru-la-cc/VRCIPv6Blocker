@@ -1,0 +1,2 @@
+# VRCIPv6Blocker
+VRChat起動時にIPv6をブロックする的な何か
