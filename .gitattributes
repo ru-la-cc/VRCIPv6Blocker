@@ -1,0 +1,23 @@
+# Set default behavior to automatically normalize line endings
+* text=auto eol=lf
+
+# Force specific files to be treated as text with LF line endings
+*.cpp text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.cmake text eol=lf
+CMakeLists.txt text eol=lf
+
+# Force UTF-8 encoding for source files
+*.cpp text eol=lf encoding=UTF-8
+*.c text eol=lf encoding=UTF-8  
+*.h text eol=lf encoding=UTF-8
+*.hpp text eol=lf encoding=UTF-8
+
+# Binary files
+*.exe binary
+*.dll binary
+*.lib binary
+*.obj binary
+*.pdb binary

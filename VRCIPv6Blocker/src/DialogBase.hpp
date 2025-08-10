@@ -8,14 +8,6 @@
 namespace ydkns {
 	// 汎用ダイアログアプリ基底クラス
 	class DialogAppBase {
-	protected:
-		HINSTANCE m_hInstance;
-		HWND m_hMainDialog;
-		int m_nCmdShow;
-		std::wstring m_applicationName;
-
-		static std::unordered_map<HWND, DialogAppBase*> m_dialogMap;
-
 	public:
 		DialogAppBase();
 		virtual ~DialogAppBase();
@@ -28,6 +20,13 @@ namespace ydkns {
 		HINSTANCE GetInstance() const { return m_hInstance; }
 
 	protected:
+		HINSTANCE m_hInstance;
+		HWND m_hMainDialog;
+		int m_nCmdShow;
+		std::wstring m_applicationName;
+
+		// static std::unordered_map<HWND, DialogAppBase*> m_dialogMap; // いったんいらんか
+
 		// 派生クラスでオーバーライドする仮想関数
 		virtual UINT GetMainDialogID() const = 0;  // ダイアログリソースID取得
 		virtual bool OnInitialize() { return true; }  // 初期化時の追加処理
@@ -57,18 +56,17 @@ namespace ydkns {
 
 	// モーダルダイアログ基底クラス
 	class ModalDialogBase {
-	protected:
-		HWND m_hWnd;
-		HWND m_hParent;
-
 	public:
 		ModalDialogBase(HWND hParent = nullptr);
 		virtual ~ModalDialogBase();
 
+	protected:
+		HWND m_hWnd;
+		HWND m_hParent;
+
 		// ダイアログ表示
 		INT_PTR ShowDialog(HINSTANCE hInstance, UINT dialogID);
 
-	protected:
 		virtual INT_PTR OnInitDialog(HWND hDlg);
 		virtual INT_PTR OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam);
 		virtual INT_PTR HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
