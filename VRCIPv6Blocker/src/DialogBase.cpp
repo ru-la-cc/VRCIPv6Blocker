@@ -4,8 +4,7 @@
 #pragma comment(lib, "comctl32.lib")
 
 namespace ydkns {
-    // スタティックメンバの定義
-    std::unordered_map<HWND, DialogAppBase*> DialogAppBase::m_dialogMap;
+    // std::unordered_map<HWND, DialogAppBase*> DialogAppBase::m_dialogMap;
 
     DialogAppBase::DialogAppBase()
         : m_hInstance(nullptr)
@@ -22,8 +21,16 @@ namespace ydkns {
         m_hInstance = hInstance;
         m_nCmdShow = nCmdShow;
 
-        // コモンコントロール初期化（C++11: 統一初期化構文）
-        INITCOMMONCONTROLSEX icc = { sizeof(INITCOMMONCONTROLSEX), ICC_WIN95_CLASSES };
+        INITCOMMONCONTROLSEX icc = {
+            sizeof(INITCOMMONCONTROLSEX),
+            ICC_WIN95_CLASSES |
+            ICC_DATE_CLASSES |
+            ICC_USEREX_CLASSES |
+            ICC_COOL_CLASSES |
+            ICC_INTERNET_CLASSES |
+            ICC_PAGESCROLLER_CLASS
+        };
+
         if (!InitCommonControlsEx(&icc)) {
             return false;
         }
@@ -54,8 +61,7 @@ namespace ydkns {
 
     void DialogAppBase::Shutdown() {
         if (m_hMainDialog) {
-            // ダイアログマップから削除
-            m_dialogMap.erase(m_hMainDialog);
+            // m_dialogMap.erase(m_hMainDialog);
 
             if (IsWindow(m_hMainDialog)) {
                 DestroyWindow(m_hMainDialog);
@@ -89,9 +95,7 @@ namespace ydkns {
             return false;
         }
 
-        // ダイアログマップに登録
-        m_dialogMap[m_hMainDialog] = this;
-
+        // m_dialogMap[m_hMainDialog] = this;
         return true;
     }
 

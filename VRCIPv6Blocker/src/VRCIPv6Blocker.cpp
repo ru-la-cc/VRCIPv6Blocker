@@ -1,17 +1,13 @@
-﻿#include "VRCIPv6Blocker.hpp"
-#include "../resource.h"
+﻿#include "resource.h"
+#include "VRCIPv6Blocker.hpp"
+#include "YDKWinUtils.hpp"
 #include <string>
 #include <memory>
-#include <CommDlg.h>  // ファイルダイアログ
-#include <Shlwapi.h>  // パス操作
+#include <CommDlg.h>
+#include <Shlwapi.h>
 
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Comdlg32.lib")
-
-VRCIPv6BlockerApp::VRCIPv6BlockerApp()
-    : ydkns::DialogAppBase() {
-    // コンストラクタ
-}
 
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
     // デストラクタ
@@ -60,4 +56,19 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
     }
 
     return ydkns::DialogAppBase::HandleMessage(hDlg, message, wParam, lParam);
+}
+
+// private
+VRCIPv6BlockerApp* VRCIPv6BlockerApp::Instance() {
+    static VRCIPv6BlockerApp app = VRCIPv6BlockerApp();
+    return &app;
+}
+
+VRCIPv6BlockerApp::VRCIPv6BlockerApp()
+    : ydkns::DialogAppBase() {
+    // コンストラクタ
+    auto path = ydkns::GetModuleDir();
+    path += logFileName;
+    static auto logger = ydkns::FileLogger(path.c_str());
+    m_Logger = &logger;
 }
