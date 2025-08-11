@@ -1,6 +1,8 @@
-﻿// Microsoft Visual C++ generated resource script.
+// Microsoft Visual C++ generated resource script.
 //
-#include "src/resource.h"
+#pragma code_page(65001)
+
+#include "resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -49,21 +51,23 @@ END
 // Dialog
 //
 
-IDD_MAINDLG DIALOGEX 0, 0, 257, 156
+IDD_MAINDLG DIALOGEX 0, 0, 273, 181
 STYLE DS_SETFONT | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "VRCIPv6Blocker"
 FONT 10, "ＭＳ ゴシック", 400, 0, 0x80
 BEGIN
-    LTEXT           "VRChat未起動",IDC_STATIC_STATUS,7,7,243,22,SS_SUNKEN
-    CONTROL         "アプリ起動時にVRChatを自動起動",IDC_CHECK_RUNVRC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,42,192,11
-    CONTROL         "VRChat終了時にこのアプリも終了",IDC_CHECK_AUTOEXIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,56,192,11
-    CONTROL         "起動時このアプリのウインドウを最小化する",IDC_CHECK_MINWINDOW,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,71,192,11
-    LTEXT           "VRChat起動用のショートカット",IDC_STATIC,16,95,126,9
-    EDITTEXT        IDC_EDIT_LINK,14,105,211,12,ES_AUTOHSCROLL,WS_EX_ACCEPTFILES
-    PUSHBUTTON      "...",IDC_BUTTON_REF,226,104,21,15
-    GROUPBOX        "設定",IDC_STATIC,7,30,243,96
-    LTEXT           "Ver 0.0.0(0)",IDC_STATIC,7,140,172,9
-    PUSHBUTTON      "設定を反映",IDC_BUTTON_SAVE,185,134,65,15
+    LTEXT           "VRChat未起動",IDC_STATIC_STATUS,7,7,259,22,SS_SUNKEN
+    CONTROL         "アプリ起動時にVRChatを自動起動",IDC_CHECK_RUNVRC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,42,205,11
+    PUSHBUTTON      "VRChat",IDC_BUTTON_RUNVRC,225,38,36,16
+    CONTROL         "VRChat終了時にこのアプリも終了",IDC_CHECK_AUTOEXIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,56,206,11
+    CONTROL         "起動時このアプリのウインドウを最小化する",IDC_CHECK_MINWINDOW,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,71,206,11
+    LTEXT           "VRChat起動用パス",IDC_STATIC,16,95,187,9
+    EDITTEXT        IDC_EDIT_LINK,14,105,225,12,ES_AUTOHSCROLL,WS_EX_ACCEPTFILES
+    PUSHBUTTON      "...",IDC_BUTTON_REF,240,104,21,15
+    GROUPBOX        "設定",IDC_STATIC,7,30,259,96
+    LTEXT           "Ver 0.0.0(0)",IDC_STATIC_VERSION,7,165,94,9
+    PUSHBUTTON      "ブロック解除(&U)",IDC_BUTTON_UNBLOCK,105,155,86,19
+    PUSHBUTTON      "設定を反映",IDC_BUTTON_SAVE,201,154,65,20
 END
 
 
@@ -78,9 +82,9 @@ BEGIN
     IDD_MAINDLG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 250
+        RIGHTMARGIN, 266
         TOPMARGIN, 7
-        BOTTOMMARGIN, 149
+        BOTTOMMARGIN, 174
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -134,6 +138,16 @@ BEGIN
         VALUE "Translation", 0x411, 1200
     END
 END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_APPLICATION         ICON                    "icon1.ico"
 
 #endif    // 日本語 (日本) resources
 /////////////////////////////////////////////////////////////////////////////

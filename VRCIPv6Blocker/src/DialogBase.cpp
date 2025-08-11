@@ -8,7 +8,7 @@ namespace ydkns {
 
     DialogAppBase::DialogAppBase()
         : m_hInstance(nullptr)
-        , m_hMainDialog(nullptr)
+        , m_hWnd(nullptr)
         , m_nCmdShow(SW_SHOW)
         , m_applicationName(L"Dialog Application") {
     }
@@ -32,10 +32,10 @@ namespace ydkns {
         };
 
         if (!InitCommonControlsEx(&icc)) {
-            return false;
+			return false;
         }
 
-        // 派生クラスの初期化処理
+		// 派生クラスの初期化処理
         if (!OnInitialize()) {
             return false;
         }
@@ -49,24 +49,24 @@ namespace ydkns {
     }
 
     int DialogAppBase::Run() {
-        if (!m_hMainDialog) {
+        if (!m_hWnd) {
             return -1;
         }
 
-        ShowWindow(m_hMainDialog, m_nCmdShow);
-        UpdateWindow(m_hMainDialog);
+        ShowWindow(m_hWnd, m_nCmdShow);
+        UpdateWindow(m_hWnd);
 
         return MessageLoop();
     }
 
     void DialogAppBase::Shutdown() {
-        if (m_hMainDialog) {
-            // m_dialogMap.erase(m_hMainDialog);
+        if (m_hWnd) {
+            // m_dialogMap.erase(m_Wnd);
 
-            if (IsWindow(m_hMainDialog)) {
-                DestroyWindow(m_hMainDialog);
+            if (IsWindow(m_hWnd)) {
+                DestroyWindow(m_hWnd);
             }
-            m_hMainDialog = nullptr;
+            m_hWnd = nullptr;
         }
 
         OnShutdown();
@@ -78,7 +78,8 @@ namespace ydkns {
             return false;
         }
 
-        m_hMainDialog = CreateDialogParam(
+		// m_hWndはWM_INITDIALOGで入ってくるのだが...
+        m_hWnd = CreateDialogParamW(
             m_hInstance,
             MAKEINTRESOURCE(dialogID),
             nullptr,
@@ -86,16 +87,16 @@ namespace ydkns {
             reinterpret_cast<LPARAM>(this)
         );
 
-        if (!m_hMainDialog) {
+        if (!m_hWnd) {
             DWORD error = GetLastError();
             // エラー情報を出力（デバッグ用）
             wchar_t errorMsg[256];
-            swprintf_s(errorMsg, L"CreateDialogParam failed. Error: %lu", error);
+            ::swprintf_s(errorMsg, L"CreateDialogParam failed. Error: %lu", error);
             OutputDebugString(errorMsg);
             return false;
         }
 
-        // m_dialogMap[m_hMainDialog] = this;
+        // m_dialogMap[m_hWnd] = this;
         return true;
     }
 
@@ -115,7 +116,7 @@ namespace ydkns {
             }
 
             // ダイアログメッセージの処理
-            if (!IsDialogMessage(m_hMainDialog, &msg)) {
+            if (!IsDialogMessage(m_hWnd, &msg)) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
             }
@@ -164,6 +165,7 @@ namespace ydkns {
 
     INT_PTR DialogAppBase::OnInitDialog(HWND hDlg) {
         // ウィンドウアイコン設定（必要に応じて）
+		m_hWnd = hDlg;
         HICON hIcon = LoadIcon(m_hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
         if (hIcon) {
             SendMessage(hDlg, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));

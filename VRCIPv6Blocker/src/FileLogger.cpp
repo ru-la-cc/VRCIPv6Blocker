@@ -1,4 +1,5 @@
 ﻿#include "FileLogger.hpp"
+#include "YDKWinUtils.hpp"
 #include <strsafe.h>
 #include <iterator>
 
@@ -101,12 +102,12 @@ namespace ydkns {
 		if (m_hFile == INVALID_HANDLE_VALUE) return false;
 		SYSTEMTIME st;
 		::GetLocalTime(&st);
-		WCHAR szTimeStampAndType[64];
-		LPCWSTR LogTypes[] = { L"INFO\t", L"WARNING\t", L"ERROR\t" };
+		char szTimeStampAndType[64];
+		const char* LogTypes[] = { "INFO\t", "WARNING\t", "ERROR\t" };
 
-		if (!SUCCEEDED(::StringCchPrintfW(szTimeStampAndType,
+		if (!SUCCEEDED(::StringCchPrintfA(szTimeStampAndType,
 				std::size(szTimeStampAndType),
-				L"%04u-%02u-%02u %02u:%02u:%02u.%03u\t%s",
+				"%04u-%02u-%02u %02u:%02u:%02u.%03u\t%s",
 				st.wYear,
 				st.wMonth,
 				st.wDay,
@@ -117,21 +118,26 @@ namespace ydkns {
 				LogTypes[static_cast<size_t>(logType) >= std::size(LogTypes) ? 0 : static_cast<size_t>(logType)]))) {
 			SetError(::GetLastError());
 		}
-		
+
+		char szMessage[2048]; // まぁこれだけあれば足りるだろうし...
+		ydkns::ToUtf8(lpMessage, szMessage, sizeof(szMessage));
 
 		DWORD dwWrite;
-		if (!::WriteFile(m_hFile, szTimeStampAndType, ::wcslen(szTimeStampAndType) * sizeof(WCHAR), &dwWrite, nullptr)) {
+		if (!::WriteFile(m_hFile, szTimeStampAndType,
+				static_cast<DWORD>(std::strlen(szTimeStampAndType)), &dwWrite, nullptr)) {
 			SetError(::GetLastError());
 			return false;
 		}
-		if (!::WriteFile(m_hFile, lpMessage, ::wcslen(lpMessage) * sizeof(WCHAR), &dwWrite, nullptr)) {
+		if (!::WriteFile(m_hFile, szMessage,
+				static_cast<DWORD>(std::strlen(szMessage)), &dwWrite, nullptr)) {
 			SetError(::GetLastError());
 			return false;
 		}
-		if (!::WriteFile(m_hFile, L"\n", 1 * sizeof(WCHAR), &dwWrite, nullptr)) {
+		if (!::WriteFile(m_hFile, "\n", 1, &dwWrite, nullptr)) {
 			SetError(::GetLastError());
 			return false;
-		}		if (m_isAutoFlush) return Flush();
+		}
+		if (m_isAutoFlush) return Flush();
 		return true;
 	}
 

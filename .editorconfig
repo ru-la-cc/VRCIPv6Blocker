@@ -1,4 +1,4 @@
-﻿# Visual Studio で、C++ の設定で .editorconfig ファイルが生成されました。
+# Visual Studio で、C++ の設定で .editorconfig ファイルが生成されました。
 root = true
 
 [*.{c++,cc,cpp,cppm,cxx,h,h++,hh,hpp,hxx,inl,ipp,ixx,tlh,tli}]
@@ -86,6 +86,6 @@ cpp_includes_use_forward_slash = true
 
 [*]
 end_of_line = lf
-charset = utf-8
+charset = utf-8-bom
 trim_trailing_whitespace = true
 insert_final_newline = true

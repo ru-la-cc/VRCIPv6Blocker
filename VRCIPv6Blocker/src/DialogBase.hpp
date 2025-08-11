@@ -16,12 +16,12 @@ namespace ydkns {
 		int Run();
 		void Shutdown();
 
-		HWND GetMainDialog() const { return m_hMainDialog; }
+		HWND GetMainDialog() const { return m_hWnd; }
 		HINSTANCE GetInstance() const { return m_hInstance; }
 
 	protected:
 		HINSTANCE m_hInstance;
-		HWND m_hMainDialog;
+		HWND m_hWnd;
 		int m_nCmdShow;
 		std::wstring m_applicationName;
 
