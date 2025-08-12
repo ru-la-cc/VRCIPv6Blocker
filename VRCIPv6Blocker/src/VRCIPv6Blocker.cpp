@@ -8,7 +8,10 @@
 #pragma comment(lib, "Comdlg32.lib")
 
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
-    // デストラクタ
+    // デストラクタ（シングルトンだからコンストラクタはprivate↓）
+	if (m_lpArgList != nullptr) {
+		::LocalFree(m_lpArgList);
+	}
 	m_Logger->Log(L"アプリを終了します");
 }
 
@@ -33,15 +36,31 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 }
 
 INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
+	switch (HIWORD(wParam)) {
+	case BN_CLICKED:
+		m_Logger->Log(L"BN_CLICKED");
+		switch (LOWORD(wParam)) {
+		case IDC_CHECK_RUNVRC:
+			::EnableWindow(::GetDlgItem(m_hWnd,
+				IDC_BUTTON_RUNVRC),
+				::IsDlgButtonChecked(m_hWnd, IDC_CHECK_RUNVRC) != BST_CHECKED);
+			return TRUE;
+		case IDC_CHECK_FIREWALL:
+			auto isFirewall = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_FIREWALL) == BST_CHECKED;
+			::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), isFirewall);
+			::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), !isFirewall);
+			return TRUE;
+		}
+	}
+
     switch (LOWORD(wParam)) {
 	case IDC_BUTTON_SAVE:
 		GetSetting();
 		SaveSetting();
 		::MessageBoxW(m_hWnd, L"設定を保存しました", L"通知", MB_ICONINFORMATION | MB_OK);
 		return TRUE;
-    default:
-        return ydkns::DialogAppBase::OnCommand(hDlg, wParam, lParam);
     }
+	return ydkns::DialogAppBase::OnCommand(hDlg, wParam, lParam);
 }
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
@@ -72,6 +91,18 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 	static auto logger = ydkns::FileLogger((m_ModulePath + logFileName).c_str());
     m_Logger = &logger;
 	m_Logger->Log(L"アプリを起動します");
+	m_lpArgList = CommandLineToArgvW(GetCommandLineW(), &m_argc);
+	if (m_lpArgList == nullptr) {
+		m_argc = 0;
+		m_Logger->LogError(L"コマンドライン引数の読込に失敗しました");
+	}
+	else {
+		constexpr LPCWSTR ARG_AUTORUN = L"-autorun";
+		for (int i = 0; i < m_argc; ++i) {
+			m_isAutoRun = std::wcscmp(m_lpArgList[i], ARG_AUTORUN) == 0;
+		}
+	}
+	if (m_isAutoRun) m_Logger->Log(L"VRChatを自動実行 ... できたらします");
 }
 
 // ブロックリストの読込
@@ -152,6 +183,7 @@ void VRCIPv6BlockerApp::LoadSetting() {
 	m_Setting.uRunVRC = ::GetPrivateProfileIntW(APP_NAME, IK_RUNVRC, BST_CHECKED, iniPath.c_str());
 	m_Setting.uAutoShutdown = ::GetPrivateProfileIntW(APP_NAME, IK_AUTOSHUTDOWN, BST_CHECKED, iniPath.c_str());
 	m_Setting.uMinWindow = ::GetPrivateProfileIntW(APP_NAME, IK_MINWINDOW, BST_UNCHECKED, iniPath.c_str());
+	m_Setting.uFirewallBlock = ::GetPrivateProfileIntW(APP_NAME, IK_FIREWALLBLOCK, BST_CHECKED, iniPath.c_str());
 	WCHAR szPath[MAX_PATH];
 	::GetPrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, L"", szPath, std::size(szPath), iniPath.c_str());
 	m_Setting.strExecutePath = szPath;
@@ -171,6 +203,8 @@ void VRCIPv6BlockerApp::SaveSetting() {
 	::WritePrivateProfileStringW(APP_NAME, IK_AUTOSHUTDOWN, szFormat, iniPath.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uMinWindow);
 	::WritePrivateProfileStringW(APP_NAME, IK_MINWINDOW, szFormat, iniPath.c_str());
+	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uFirewallBlock);
+	::WritePrivateProfileStringW(APP_NAME, IK_FIREWALLBLOCK, szFormat, iniPath.c_str());
 	::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), iniPath.c_str());
 	m_Logger->Log(L"設定を書込みました");
 	DumpSetting();
@@ -180,6 +214,7 @@ void VRCIPv6BlockerApp::GetSetting() {
 	m_Setting.uRunVRC = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_RUNVRC);
 	m_Setting.uAutoShutdown = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_AUTOEXIT);
 	m_Setting.uMinWindow = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_MINWINDOW);
+	m_Setting.uFirewallBlock = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_FIREWALL);
 	WCHAR szPath[MAX_PATH];
 	::GetDlgItemTextW(m_hWnd, IDC_EDIT_LINK, szPath, std::size(szPath));
 	m_Setting.strExecutePath = szPath;
@@ -189,6 +224,7 @@ void VRCIPv6BlockerApp::SetSetting() {
 	::CheckDlgButton(m_hWnd, IDC_CHECK_RUNVRC, m_Setting.uRunVRC);
 	::CheckDlgButton(m_hWnd, IDC_CHECK_AUTOEXIT, m_Setting.uAutoShutdown);
 	::CheckDlgButton(m_hWnd, IDC_CHECK_MINWINDOW, m_Setting.uMinWindow);
+	::CheckDlgButton(m_hWnd, IDC_CHECK_FIREWALL, m_Setting.uFirewallBlock);
 	::SetDlgItemTextW(m_hWnd, IDC_EDIT_LINK, m_Setting.strExecutePath.c_str());
 
 	CheckDialogControl();
@@ -198,10 +234,11 @@ void VRCIPv6BlockerApp::DumpSetting() {
 	WCHAR szLog[384];
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
-		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), strExecutePath(%s)",
+		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), strExecutePath(%s)",
 		m_Setting.uRunVRC,
 		m_Setting.uAutoShutdown,
 		m_Setting.uMinWindow,
+		m_Setting.uFirewallBlock,
 		m_Setting.strExecutePath.c_str());
 	m_Logger->Log(szLog);
 }
@@ -213,4 +250,6 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	else {
 		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_RUNVRC), TRUE);
 	}
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), m_Setting.uFirewallBlock == BST_CHECKED);
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), m_Setting.uFirewallBlock != BST_CHECKED);
 }

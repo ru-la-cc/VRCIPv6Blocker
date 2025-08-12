@@ -1,9 +1,8 @@
-//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ Ç≈ê∂ê¨Ç≥ÇÍÇΩÉCÉìÉNÉãÅ[Éh ÉtÉ@ÉCÉãÅB
-// VRCIPv6Blocker.rc Ç≈égóp
+Ôªø//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++ „ÅßÁîüÊàê„Åï„Çå„Åü„Ç§„É≥„ÇØ„É´„Éº„Éâ „Éï„Ç°„Ç§„É´„ÄÇ
+// VRCIPv6Blocker.rc „Åß‰ΩøÁî®
 //
 #define IDD_MAINDLG                     101
-#define IDI_APPLICATION                 103
 #define IDC_STATIC_STATUS               1001
 #define IDC_CHECK_RUNVRC                1003
 #define IDC_CHECK_AUTOEXIT              1004
@@ -15,7 +14,11 @@
 #define IDC_BUTTON_RUNVRC               1009
 #define IDC_BUTTON_SAVE2                1010
 #define IDC_BUTTON_UNBLOCK              1010
+#define IDC_BUTTON_FIREWALL             1010
 #define IDC_STATIC_VERSION              1011
+#define IDC_BUTTON_DISABLEIPV6          1012
+#define IDC_BUTTON_IPV6                 1012
+#define IDC_CHECK_FIREWALL              1013
 
 // Next default values for new objects
 // 
