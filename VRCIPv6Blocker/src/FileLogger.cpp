@@ -2,6 +2,7 @@
 #include "YDKWinUtils.hpp"
 #include <strsafe.h>
 #include <iterator>
+#include <cstring>
 
 namespace ydkns {
 	FileLogger::FileLogger(LPCWSTR filePath, bool isAppend, bool isAutoFlush) {

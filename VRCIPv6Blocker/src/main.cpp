@@ -8,7 +8,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
 	ydkns::AppMutex appMutex(MUTEX_NAME);
-	if (appMutex.IsRefusal()) return 2; // 多重起動は許さぬ
+	if (appMutex.IsRunning()) return 2; // 多重起動は許さぬ
 
 	VRCIPv6BlockerApp* app = VRCIPv6BlockerApp::Instance();
 	if (!app->Initialize(hInstance, nCmdShow)) {

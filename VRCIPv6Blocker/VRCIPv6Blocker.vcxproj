@@ -142,7 +142,6 @@
     <ClInclude Include="src\YDKWinUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\AppMutex.cpp" />
     <ClCompile Include="src\DialogBase.cpp" />
     <ClCompile Include="src\FileLogger.cpp" />
     <ClCompile Include="src\main.cpp" />

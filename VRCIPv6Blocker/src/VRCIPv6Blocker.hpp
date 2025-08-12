@@ -10,6 +10,7 @@ public:
 		UINT uRunVRC;
 		UINT uAutoShutdown;
 		UINT uMinWindow;
+		UINT uFirewallBlock;
 		std::wstring strExecutePath;
 	};
 
@@ -18,6 +19,7 @@ public:
 	LPCWSTR IK_RUNVRC = L"RunVRC";
 	LPCWSTR IK_AUTOSHUTDOWN = L"AutoShutdown";
 	LPCWSTR IK_MINWINDOW = L"MinWindow";
+	LPCWSTR IK_FIREWALLBLOCK = L"FirewallBlock";
 	LPCWSTR IK_EXECUTEPATH = L"Execute";
 	virtual ~VRCIPv6BlockerApp();
 	inline ydkns::IFileLogger<WCHAR>* Logger() { return m_Logger; }
@@ -40,6 +42,9 @@ private:
 	std::wstring m_ModulePath;
 	std::wstring m_currentFile; // 何に使う想定だったか思い出せんけど一応残しておこう使わんなら消す
 	ydkns::IFileLogger<WCHAR>* m_Logger;
+	int m_argc;
+	LPWSTR* m_lpArgList;
+	bool m_isAutoRun;
 
 	// 設定関連
 	INI_SETTING m_Setting;

@@ -53,9 +53,6 @@
     <ClCompile Include="src\YDKWinUtils.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="src\AppMutex.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="VRCIPv6Blocker.rc">

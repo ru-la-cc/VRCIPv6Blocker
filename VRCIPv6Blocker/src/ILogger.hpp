@@ -20,26 +20,20 @@ namespace ydkns {
 
 	template <typename TChar>
 	requires CharType<TChar>
-	class ILogger {
-	public:
+	struct ILogger {
 		virtual ~ILogger() = default;
 		virtual bool Log(const TChar* message) = 0;
 		virtual bool LogWarning(const TChar* message) = 0;
 		virtual bool LogError(const TChar* message) = 0;
-	protected:
-		ILogger() = default;
 	};
 
 	template <typename TChar>
 	requires CharType<TChar>
-	class IFileLogger : public ILogger<TChar> {
-	public:
+	struct IFileLogger : public ILogger<TChar> {
 		virtual ~IFileLogger() = default;
 		virtual bool Open() = 0;
 		virtual bool Close() = 0;
 		virtual bool Flush() = 0;
-	protected:
-		IFileLogger() = default;
 	};
 }
 #endif
