@@ -1,5 +1,6 @@
 ﻿#include "VRCIPv6Blocker.hpp"
 #include "YDKWinUtils.hpp"
+#include "SubClassEditHandler.hpp"
 #include <CommDlg.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
@@ -17,6 +18,7 @@ VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
 
 bool VRCIPv6BlockerApp::OnInitialize() {
     // アプリケーション初期化
+
 	return true;
 }
 
@@ -28,6 +30,9 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
     // 基底クラスの処理
     ydkns::DialogAppBase::OnInitDialog(hDlg);
     // まぁこのあたりに初期化処理を書く予定
+	m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
+	m_pEditPath = std::make_unique<ydkns::SubclassView>(m_pEditPathHandler.get());
+
 	LoadBlockList();
 	LoadSetting();
 	SetSetting();
@@ -91,6 +96,7 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 	static auto logger = ydkns::FileLogger((m_ModulePath + logFileName).c_str());
     m_Logger = &logger;
 	m_Logger->Log(L"アプリを起動します");
+
 	m_lpArgList = CommandLineToArgvW(GetCommandLineW(), &m_argc);
 	if (m_lpArgList == nullptr) {
 		m_argc = 0;

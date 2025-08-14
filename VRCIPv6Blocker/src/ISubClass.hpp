@@ -2,22 +2,22 @@
 #include <windows.h>
 
 namespace ydkns {
-	struct ISubClassHandler {
-		virtual ~ISubClassHandler() = default;
+	struct ISubclassHandler {
+		virtual ~ISubclassHandler() = default;
 		virtual HWND GetWindow() const = 0;
 		virtual LRESULT HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
 	};
 
-	struct ISubClassView {
-		virtual ~ISubClassView() = default;
+	struct ISubclassView {
+		virtual ~ISubclassView() = default;
 		virtual void ChangeWindowProc() = 0;
 		virtual void ResetWindowProc() = 0;
 	};
 
-	class SubClassHandler : public ISubClassHandler {
+	class SubclassHandler : public ISubclassHandler {
 	public:
-		SubClassHandler(HWND hWnd) : m_hWnd(hWnd) {}
-		virtual ~SubClassHandler() override = default;
+		SubclassHandler(HWND hWnd) : m_hWnd(hWnd) {}
+		virtual ~SubclassHandler() override = default;
 
 		[[noexcept]] constexpr HWND GetWindow() const override { return m_hWnd; }
 
@@ -30,19 +30,19 @@ namespace ydkns {
 	private:
 		HWND m_hWnd;
 		static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-		friend class SubClassView;
+		friend class SubclassView;
 	};
 
-	class SubClassView : public ISubClassView {
+	class SubclassView : public ISubclassView {
 	public:
-		SubClassView(ISubClassHandler* handler);
-		virtual ~SubClassView() override;
+		SubclassView(ISubclassHandler* handler);
+		virtual ~SubclassView() override;
 
 		void ChangeWindowProc() override;
 		void ResetWindowProc() override;
 
 	private:
-		ISubClassHandler* m_pHandler;
+		ISubclassHandler* m_pHandler;
 		WNDPROC m_originalWndProc; // 元のウィンドウプロシージャ
 		bool m_isSubclassed;
 	};

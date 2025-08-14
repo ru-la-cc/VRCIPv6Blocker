@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "DialogBase.hpp"
 #include "FileLogger.hpp"
+#include "ISubclass.hpp"
+#include "ComInitializer.hpp"
 #include <vector>
 #include "../resource.h"
 
@@ -42,9 +44,12 @@ private:
 	std::wstring m_ModulePath;
 	std::wstring m_currentFile; // 何に使う想定だったか思い出せんけど一応残しておこう使わんなら消す
 	ydkns::IFileLogger<WCHAR>* m_Logger;
+	ydkns::ComInitializer m_comInitializer;
 	int m_argc;
 	LPWSTR* m_lpArgList;
-	bool m_isAutoRun;
+	bool m_isAutoRun = false;
+	std::unique_ptr<ydkns::ISubclassHandler> m_pEditPathHandler;
+	std::unique_ptr<ydkns::ISubclassView> m_pEditPath;
 
 	// 設定関連
 	INI_SETTING m_Setting;

@@ -66,7 +66,7 @@ BEGIN
     PUSHBUTTON      "FWブロック登録",IDC_BUTTON_FIREWALL,210,102,80,16
     LTEXT           "VRChat起動用パス",IDC_STATIC,16,123,187,9
     EDITTEXT        IDC_EDIT_LINK,14,133,257,12,ES_AUTOHSCROLL,WS_EX_ACCEPTFILES
-    PUSHBUTTON      "...",IDC_BUTTON_REF,272,132,21,15
+    PUSHBUTTON      "...",IDC_BUTTON_REF,273,132,21,15
     GROUPBOX        "設定",IDC_STATIC,7,30,293,123
     LTEXT           "Ver 0.0.0(0)",IDC_STATIC_VERSION,7,164,94,9
     PUSHBUTTON      "設定を反映",IDC_BUTTON_SAVE,219,156,81,17
@@ -149,7 +149,7 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_APPLICATION         ICON                    "icon1.ico"
+32512                   ICON                    "icon1.ico"
 
 #endif    // 日本語 (日本) resources
 /////////////////////////////////////////////////////////////////////////////
