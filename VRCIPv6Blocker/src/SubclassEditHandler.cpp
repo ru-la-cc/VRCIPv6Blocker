@@ -2,7 +2,6 @@
 #include <iterator>
 
 LRESULT SubclassEditHandler::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	static bool isFirst = false;
 	switch (msg) {
 	case WM_DROPFILES:
 		HDROP hDrop = reinterpret_cast<HDROP>(wParam);
