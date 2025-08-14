@@ -36,7 +36,13 @@
     <ClInclude Include="resource.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\ISubClass.hpp">
+    <ClInclude Include="src\ISubclass.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SubclassEditHandler.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ComInitializer.hpp">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -56,7 +62,10 @@
     <ClCompile Include="src\YDKWinUtils.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="src\SubClass.cpp">
+    <ClCompile Include="src\Subclass.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SubclassEditHandler.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

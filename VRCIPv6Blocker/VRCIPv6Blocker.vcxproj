@@ -135,10 +135,12 @@
   <ItemGroup>
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\AppMutex.hpp" />
+    <ClInclude Include="src\ComInitializer.hpp" />
     <ClInclude Include="src\DialogBase.hpp" />
     <ClInclude Include="src\FileLogger.hpp" />
     <ClInclude Include="src\ILogger.hpp" />
-    <ClInclude Include="src\ISubClass.hpp" />
+    <ClInclude Include="src\ISubclass.hpp" />
+    <ClInclude Include="src\SubclassEditHandler.hpp" />
     <ClInclude Include="src\VRCIPv6Blocker.hpp" />
     <ClInclude Include="src\YDKWinUtils.hpp" />
   </ItemGroup>
@@ -146,7 +148,8 @@
     <ClCompile Include="src\DialogBase.cpp" />
     <ClCompile Include="src\FileLogger.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\SubClass.cpp" />
+    <ClCompile Include="src\Subclass.cpp" />
+    <ClCompile Include="src\SubclassEditHandler.cpp" />
     <ClCompile Include="src\VRCIPv6Blocker.cpp">
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebug</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MultiThreaded</RuntimeLibrary>

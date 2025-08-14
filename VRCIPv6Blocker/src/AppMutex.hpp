@@ -18,7 +18,13 @@ namespace ydkns {
 			m_Error = 0;
 		}
 
-		// これがtrueなら起動させない敵なことをするなど
+		// こんなんコピーやムーブするかぁ...?
+		AppMutex(const AppMutex&) = delete;
+		AppMutex& operator=(const AppMutex&) = delete;
+		AppMutex(AppMutex&&) = delete;
+		AppMutex& operator=(AppMutex&&) = delete;
+
+		// これがtrueなら起動させない的なことをするなど
 		inline bool IsRunning() const noexcept{ return (m_hMutex == nullptr || m_Error == ERROR_ALREADY_EXISTS); }
 	};
 }
