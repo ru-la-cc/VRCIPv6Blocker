@@ -51,25 +51,27 @@ END
 // Dialog
 //
 
-IDD_MAINDLG DIALOGEX 0, 0, 307, 180
+IDD_MAINDLG DIALOGEX 0, 0, 307, 162
 STYLE DS_SETFONT | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "VRCIPv6Blocker"
-FONT 10, "ＭＳ ゴシック", 400, 0, 0x80
+FONT 10, "Segoe UI Emoji", 400, 0, 0x0
 BEGIN
-    LTEXT           "VRChat未起動",IDC_STATIC_STATUS,7,7,293,22,SS_SUNKEN
-    CONTROL         "アプリ起動時にVRChatを自動起動",IDC_CHECK_RUNVRC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,42,205,11
-    PUSHBUTTON      "VRChat起動",IDC_BUTTON_RUNVRC,220,38,71,16
-    CONTROL         "VRChat終了時にこのアプリも終了",IDC_CHECK_AUTOEXIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,56,206,11
-    CONTROL         "起動時このアプリのウインドウを最小化する",IDC_CHECK_MINWINDOW,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,71,206,11
-    CONTROL         "ファイアウォールでブロックする",IDC_CHECK_FIREWALL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,85,206,11
-    PUSHBUTTON      "IPv6無効化",IDC_BUTTON_IPV6,129,102,80,16
-    PUSHBUTTON      "FWブロック登録",IDC_BUTTON_FIREWALL,210,102,80,16
-    LTEXT           "VRChat起動用パス",IDC_STATIC,16,123,187,9
-    EDITTEXT        IDC_EDIT_LINK,14,133,257,12,ES_AUTOHSCROLL,WS_EX_ACCEPTFILES
-    PUSHBUTTON      "...",IDC_BUTTON_REF,273,132,21,15
-    GROUPBOX        "設定",IDC_STATIC,7,30,293,123
-    LTEXT           "Ver 0.0.0(0)",IDC_STATIC_VERSION,7,164,94,9
-    PUSHBUTTON      "設定を反映",IDC_BUTTON_SAVE,219,156,81,17
+    LTEXT           "VRChat未起動",IDC_STATIC_STATUS,7,7,293,11,SS_SUNKEN
+    CONTROL         "アプリ起動時にVRChatを自動起動",IDC_CHECK_RUNVRC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,33,205,11
+    PUSHBUTTON      "VRChat起動",IDC_BUTTON_RUNVRC,232,29,57,16
+    CONTROL         "VRChat終了時にこのアプリも終了",IDC_CHECK_AUTOEXIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,44,206,11
+    CONTROL         "起動時このアプリのウインドウを最小化する",IDC_CHECK_MINWINDOW,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,56,206,11
+    CONTROL         "ファイアウォールでブロックする",IDC_CHECK_FIREWALL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,68,206,11
+    PUSHBUTTON      "IPv6無効化",IDC_BUTTON_IPV6,129,81,80,16
+    PUSHBUTTON      "FWブロック登録",IDC_BUTTON_FIREWALL,210,81,80,16
+    LTEXT           "VRChat起動用パス",IDC_STATIC,16,100,187,8
+    EDITTEXT        IDC_EDIT_LINK,14,109,255,12,ES_AUTOHSCROLL,WS_EX_ACCEPTFILES
+    PUSHBUTTON      "...",IDC_BUTTON_REF,273,109,21,13
+    GROUPBOX        "設定",IDC_STATIC,7,21,293,112
+    LTEXT           "Ver 0.0.0(0)",IDC_STATIC_VERSION,7,146,74,9
+    PUSHBUTTON      "🔗",IDC_BUTTON_MAKELINK,89,140,19,15
+    LTEXT           "起動用ショートカットを作る",IDC_STATIC,110,144,103,9
+    PUSHBUTTON      "設定を反映",IDC_BUTTON_SAVE,219,138,81,17
 END
 
 
@@ -86,7 +88,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 300
         TOPMARGIN, 7
-        BOTTOMMARGIN, 173
+        BOTTOMMARGIN, 155
     END
 END
 #endif    // APSTUDIO_INVOKED

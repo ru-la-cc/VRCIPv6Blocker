@@ -1,5 +1,5 @@
-﻿#include "FileLogger.hpp"
-#include "YDKWinUtils.hpp"
+﻿#include "FileLogger.h"
+#include "YDKWinUtils.h"
 #include <strsafe.h>
 #include <iterator>
 #include <cstring>

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <windows.h>
-#include "ILogger.hpp"
+#include "ILogger.h"
 
 namespace ydkns {
 	class FileLogger final : public IFileLogger<WCHAR> {

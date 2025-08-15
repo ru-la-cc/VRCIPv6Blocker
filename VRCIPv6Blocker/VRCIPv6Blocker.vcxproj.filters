@@ -15,34 +15,37 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\DialogBase.hpp">
+    <ClInclude Include="src\DialogBase.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\VRCIPv6Blocker.hpp">
+    <ClInclude Include="src\VRCIPv6Blocker.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\FileLogger.hpp">
+    <ClInclude Include="src\FileLogger.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\ILogger.hpp">
+    <ClInclude Include="src\ILogger.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\YDKWinUtils.hpp">
+    <ClInclude Include="src\YDKWinUtils.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\AppMutex.hpp">
+    <ClInclude Include="src\AppMutex.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\ISubclass.hpp">
+    <ClInclude Include="src\ISubclass.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\SubclassEditHandler.hpp">
+    <ClInclude Include="src\SubclassEditHandler.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\ComInitializer.hpp">
+    <ClInclude Include="src\ComInitializer.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ProcessFinder.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

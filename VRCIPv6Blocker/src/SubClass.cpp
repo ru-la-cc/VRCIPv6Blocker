@@ -1,4 +1,4 @@
-﻿#include "ISubclass.hpp"
+﻿#include "ISubclass.h"
 #include <unordered_map>
 #include <memory>
 
