@@ -3,7 +3,7 @@
 
 #pragma comment(lib, "comctl32.lib")
 
-namespace ydkns {
+namespace ydk {
     // std::unordered_map<HWND, DialogAppBase*> DialogAppBase::m_dialogMap;
 
     DialogAppBase::DialogAppBase()
@@ -166,7 +166,7 @@ namespace ydkns {
     INT_PTR DialogAppBase::OnInitDialog(HWND hDlg) {
         // ウィンドウアイコン設定（必要に応じて）
 		m_hWnd = hDlg;
-        HICON hIcon = LoadIcon(m_hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
+        HICON hIcon = LoadIcon(m_hInstance, IDI_APPLICATION);
         if (hIcon) {
             SendMessage(hDlg, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
             SendMessage(hDlg, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));

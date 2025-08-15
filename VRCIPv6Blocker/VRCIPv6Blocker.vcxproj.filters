@@ -45,7 +45,7 @@
     <ClInclude Include="src\ComInitializer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\ProcessFinder.h">
+    <ClInclude Include="src\ProcessWaiter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

@@ -2,7 +2,7 @@
 #include <windows.h>
 #include "ILogger.h"
 
-namespace ydkns {
+namespace ydk {
 	class FileLogger final : public IFileLogger<WCHAR> {
 	public:
 		FileLogger(LPCWSTR filePath, bool isAppend = false, bool isAutoFlush = true);

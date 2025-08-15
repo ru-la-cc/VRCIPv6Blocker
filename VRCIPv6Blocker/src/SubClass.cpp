@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <memory>
 
-namespace ydkns {
+namespace ydk {
 	static std::unordered_map<HWND, std::pair<ISubclassHandler*, WNDPROC>> s_Subclass_map;
 
 	LRESULT CALLBACK SubclassHandler::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {

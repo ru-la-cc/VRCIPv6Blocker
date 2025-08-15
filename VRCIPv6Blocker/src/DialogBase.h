@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace ydkns {
+namespace ydk {
 	// 汎用ダイアログアプリ基底クラス
 	class DialogAppBase {
 	public:

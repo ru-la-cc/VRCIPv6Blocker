@@ -6,7 +6,6 @@ LRESULT SubclassEditHandler::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, L
 	case WM_DROPFILES:
 		HDROP hDrop = reinterpret_cast<HDROP>(wParam);
 		HANDLE hFind;
-		UINT id = ::GetWindowLongPtr(hWnd, GWLP_ID);
 		WIN32_FIND_DATA w32fd;
 		TCHAR szFile[MAX_PATH];
 		::DragQueryFileW(hDrop, 0, szFile, MAX_PATH);

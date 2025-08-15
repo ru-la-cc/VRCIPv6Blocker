@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <windows.h>
 
-namespace ydkns {
+namespace ydk {
 	class ComInitializer final {
 	public:
 		ComInitializer(DWORD coInit = COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) {

@@ -140,7 +140,7 @@
     <ClInclude Include="src\FileLogger.h" />
     <ClInclude Include="src\ILogger.h" />
     <ClInclude Include="src\ISubclass.h" />
-    <ClInclude Include="src\ProcessFinder.h" />
+    <ClInclude Include="src\ProcessWaiter.h" />
     <ClInclude Include="src\SubclassEditHandler.h" />
     <ClInclude Include="src\VRCIPv6Blocker.h" />
     <ClInclude Include="src\YDKWinUtils.h" />

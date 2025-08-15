@@ -4,7 +4,7 @@
 #include <iterator>
 #include <cstring>
 
-namespace ydkns {
+namespace ydk {
 	FileLogger::FileLogger(LPCWSTR filePath, bool isAppend, bool isAutoFlush) {
 		::InitializeCriticalSection(&m_criticalSection);
 		::InitializeCriticalSection(&m_setterCritical);
@@ -121,7 +121,7 @@ namespace ydkns {
 		}
 
 		char szMessage[2048]; // まぁこれだけあれば足りるだろうし...
-		ydkns::ToUtf8(lpMessage, szMessage, sizeof(szMessage));
+		ydk::ToUtf8(lpMessage, szMessage, sizeof(szMessage));
 
 		DWORD dwWrite;
 		if (!::WriteFile(m_hFile, szTimeStampAndType,

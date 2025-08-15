@@ -3,7 +3,7 @@
 #include <fcntl.h>
 #include <io.h>
 
-namespace ydkns {
+namespace ydk {
 	std::wstring GetModuleDir(HMODULE hModule) {
 		WCHAR szPath[MAX_PATH];
 		if (::GetModuleFileNameW(hModule, szPath, std::size(szPath))) szPath[std::size(szPath) - 1] = L'\0';

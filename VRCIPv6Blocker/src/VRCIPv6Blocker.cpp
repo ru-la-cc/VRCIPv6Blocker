@@ -28,14 +28,24 @@ void VRCIPv6BlockerApp::OnShutdown() {
 
 INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
     // 基底クラスの処理
-    ydkns::DialogAppBase::OnInitDialog(hDlg);
+    ydk::DialogAppBase::OnInitDialog(hDlg);
     // まぁこのあたりに初期化処理を書く予定
 	m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
-	m_pEditPath = std::make_unique<ydkns::SubclassView>(m_pEditPathHandler.get());
+	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
 
 	LoadBlockList();
 	LoadSetting();
 	SetSetting();
+
+	if (m_Setting.uNonBlocking == BST_CHECKED) {
+		WCHAR szCaption[64];
+		::swprintf_s(szCaption, L"%s (NonBlock)", APP_NAME);
+		::SetWindowTextW(m_hWnd, szCaption);
+		m_Logger->LogWarning(L"IPv6をブロックしない名前と相反する動作をします");
+	}
+	else {
+		::SetWindowTextW(m_hWnd, APP_NAME);
+	}
 
     return TRUE;
 }
@@ -65,11 +75,11 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 		::MessageBoxW(m_hWnd, L"設定を保存しました", L"通知", MB_ICONINFORMATION | MB_OK);
 		return TRUE;
     }
-	return ydkns::DialogAppBase::OnCommand(hDlg, wParam, lParam);
+	return ydk::DialogAppBase::OnCommand(hDlg, wParam, lParam);
 }
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
-    return ydkns::DialogAppBase::OnClose(hDlg);
+    return ydk::DialogAppBase::OnClose(hDlg);
 }
 
 INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
@@ -79,7 +89,7 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
     return TRUE;
     }
 
-    return ydkns::DialogAppBase::HandleMessage(hDlg, message, wParam, lParam);
+    return ydk::DialogAppBase::HandleMessage(hDlg, message, wParam, lParam);
 }
 
 // private
@@ -90,10 +100,10 @@ VRCIPv6BlockerApp* VRCIPv6BlockerApp::Instance() {
 }
 
 VRCIPv6BlockerApp::VRCIPv6BlockerApp()
-    : ydkns::DialogAppBase() {
+    : ydk::DialogAppBase() {
     // コンストラクタ
-    m_ModulePath = ydkns::GetModuleDir();
-	static auto logger = ydkns::FileLogger((m_ModulePath + logFileName).c_str());
+    m_ModulePath = ydk::GetModuleDir();
+	static auto logger = ydk::FileLogger((m_ModulePath + logFileName).c_str());
     m_Logger = &logger;
 	m_Logger->Log(L"アプリを起動します");
 
@@ -117,7 +127,7 @@ void VRCIPv6BlockerApp::LoadBlockList() {
 	m_BlockList.clear();
 	std::wstring blocklistPath(m_ModulePath);
 	blocklistPath += VRCIPv6BlockerApp::BLOCK_LIST_FILE;
-	auto pf = ydkns::OpenReadFile(blocklistPath.c_str());
+	auto pf = ydk::OpenReadFile(blocklistPath.c_str());
 	if (pf == nullptr) {
 		m_Logger->LogError((std::wstring(blocklistPath) + L"を開けません").c_str());
 		::MessageBoxW(m_hWnd, L"ブロックリストが開けませんでした", L"エラー", MB_ICONERROR | MB_OK);
@@ -194,6 +204,8 @@ void VRCIPv6BlockerApp::LoadSetting() {
 	WCHAR szPath[MAX_PATH];
 	::GetPrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, L"", szPath, std::size(szPath), iniPath.c_str());
 	m_Setting.strExecutePath = szPath;
+	::GetPrivateProfileStringW(APP_NAME, IK_VRCFILE, VRCFILENAME, szPath, std::size(szPath), iniPath.c_str());
+	m_Setting.strVRCFile = szPath;
 	m_Logger->Log(L"設定を読込みました");
 	DumpSetting();
 }
@@ -214,7 +226,9 @@ void VRCIPv6BlockerApp::SaveSetting() {
 	::WritePrivateProfileStringW(APP_NAME, IK_FIREWALLBLOCK, szFormat, iniPath.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uNonBlocking);
 	::WritePrivateProfileStringW(APP_NAME, IK_NONBLOCKING, szFormat, iniPath.c_str());
+
 	::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_VRCFILE, m_Setting.strVRCFile.c_str(), iniPath.c_str());
 	m_Logger->Log(L"設定を書込みました");
 	DumpSetting();
 }
@@ -243,13 +257,25 @@ void VRCIPv6BlockerApp::DumpSetting() {
 	WCHAR szLog[384];
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
-		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u), strExecutePath(%s)",
+		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u)",
 		m_Setting.uRunVRC,
 		m_Setting.uAutoShutdown,
 		m_Setting.uMinWindow,
 		m_Setting.uFirewallBlock,
 		m_Setting.uNonBlocking,
 		m_Setting.strExecutePath.c_str());
+	m_Logger->Log(szLog);
+
+	::StringCchPrintfW(szLog,
+		std::size(szLog),
+		L"DumpSetting : strExecutePath=%s",
+		m_Setting.strExecutePath.c_str());
+	m_Logger->Log(szLog);
+
+	::StringCchPrintfW(szLog,
+		std::size(szLog),
+		L"DumpSetting : strVRCFile=%s",
+		m_Setting.strVRCFile.c_str());
 	m_Logger->Log(szLog);
 }
 
