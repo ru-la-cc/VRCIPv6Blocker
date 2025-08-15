@@ -3,7 +3,7 @@
 #include <string>
 #include <cstdio>
 
-namespace ydkns {
+namespace ydk {
 	std::wstring GetModuleDir(HMODULE hModule = nullptr);
 	int GetToUtf8Size(LPCWSTR lpUtf16);
 	int GetToUtf16Size(LPCSTR lpUtf8);

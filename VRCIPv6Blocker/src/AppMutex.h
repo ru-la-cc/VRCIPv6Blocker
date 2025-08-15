@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <windows.h>
-namespace ydkns {
+namespace ydk {
 	class AppMutex final {
 		HANDLE m_hMutex;
 		DWORD m_Error;

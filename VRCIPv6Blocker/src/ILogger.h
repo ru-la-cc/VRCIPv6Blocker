@@ -4,7 +4,7 @@
 #include <type_traits>
 
 // インターフェース的な何か
-namespace ydkns {
+namespace ydk {
 	enum class LogType : int {
 		Info = 0,
 		Warning,

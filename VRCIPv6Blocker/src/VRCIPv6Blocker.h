@@ -6,7 +6,7 @@
 #include <vector>
 #include "../resource.h"
 
-class VRCIPv6BlockerApp final : public ydkns::DialogAppBase {
+class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
 	struct INI_SETTING {
 		UINT uRunVRC;
@@ -15,6 +15,7 @@ public:
 		UINT uFirewallBlock;
 		UINT uNonBlocking;
 		std::wstring strExecutePath;
+		std::wstring strVRCFile;
 	};
 
 	LPCWSTR APP_NAME = L"VRCIPv6Blocker";
@@ -25,9 +26,10 @@ public:
 	LPCWSTR IK_FIREWALLBLOCK = L"FirewallBlock";
 	LPCWSTR IK_EXECUTEPATH = L"Execute";
 	LPCWSTR IK_NONBLOCKING = L"NonBlocking";
+	LPCWSTR IK_VRCFILE = L"VRCFile";
 
 	virtual ~VRCIPv6BlockerApp();
-	inline ydkns::IFileLogger<WCHAR>* Logger() { return m_Logger; }
+	inline ydk::IFileLogger<WCHAR>* Logger() { return m_Logger; }
 	const std::wstring& GetCurrentFile() const { return m_currentFile; }
 
 	constexpr UINT GetMainDialogID() const override { return IDD_MAINDLG; }
@@ -43,16 +45,17 @@ public:
 
 private:
 	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
+	LPCWSTR VRCFILENAME = L"VRChat.exe";
 	std::vector<std::string> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_currentFile; // 何に使う想定だったか思い出せんけど一応残しておこう使わんなら消す
-	ydkns::IFileLogger<WCHAR>* m_Logger;
-	ydkns::ComInitializer m_comInitializer;
+	ydk::IFileLogger<WCHAR>* m_Logger;
+	ydk::ComInitializer m_comInitializer;
 	int m_argc;
 	LPWSTR* m_lpArgList;
 	bool m_isAutoRun = false;
-	std::unique_ptr<ydkns::ISubclassHandler> m_pEditPathHandler;
-	std::unique_ptr<ydkns::ISubclassView> m_pEditPath;
+	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
+	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
 
 	// 設定関連
 	INI_SETTING m_Setting;

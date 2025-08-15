@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <windows.h>
 
-namespace ydkns {
+namespace ydk {
 	struct ISubclassHandler {
 		virtual ~ISubclassHandler() = default;
 		virtual HWND GetWindow() const = 0;
@@ -19,7 +19,7 @@ namespace ydkns {
 		SubclassHandler(HWND hWnd) : m_hWnd(hWnd) {}
 		virtual ~SubclassHandler() override = default;
 
-		[[noexcept]] constexpr HWND GetWindow() const override { return m_hWnd; }
+		constexpr HWND GetWindow() const noexcept override { return m_hWnd; }
 
 		LRESULT HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) override {
 			return CallOriginalWindowProc(hWnd, msg, wParam, lParam);
