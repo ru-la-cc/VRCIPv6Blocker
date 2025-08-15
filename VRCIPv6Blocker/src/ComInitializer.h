@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include <windows.h>
 
 namespace ydkns {

@@ -134,15 +134,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="src\AppMutex.hpp" />
-    <ClInclude Include="src\ComInitializer.hpp" />
-    <ClInclude Include="src\DialogBase.hpp" />
-    <ClInclude Include="src\FileLogger.hpp" />
-    <ClInclude Include="src\ILogger.hpp" />
-    <ClInclude Include="src\ISubclass.hpp" />
-    <ClInclude Include="src\SubclassEditHandler.hpp" />
-    <ClInclude Include="src\VRCIPv6Blocker.hpp" />
-    <ClInclude Include="src\YDKWinUtils.hpp" />
+    <ClInclude Include="src\AppMutex.h" />
+    <ClInclude Include="src\ComInitializer.h" />
+    <ClInclude Include="src\DialogBase.h" />
+    <ClInclude Include="src\FileLogger.h" />
+    <ClInclude Include="src\ILogger.h" />
+    <ClInclude Include="src\ISubclass.h" />
+    <ClInclude Include="src\ProcessFinder.h" />
+    <ClInclude Include="src\SubclassEditHandler.h" />
+    <ClInclude Include="src\VRCIPv6Blocker.h" />
+    <ClInclude Include="src\YDKWinUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\DialogBase.cpp" />

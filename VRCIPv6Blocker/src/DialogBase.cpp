@@ -1,4 +1,4 @@
-﻿#include "DialogBase.hpp"
+﻿#include "DialogBase.h"
 #include <CommCtrl.h>
 
 #pragma comment(lib, "comctl32.lib")

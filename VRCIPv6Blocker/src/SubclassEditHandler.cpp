@@ -1,4 +1,4 @@
-﻿#include "SubclassEditHandler.hpp"
+﻿#include "SubclassEditHandler.h"
 #include <iterator>
 
 LRESULT SubclassEditHandler::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {

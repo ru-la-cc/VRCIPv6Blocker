@@ -1,6 +1,6 @@
-﻿#include "VRCIPv6Blocker.hpp"
-#include "YDKWinUtils.hpp"
-#include "SubClassEditHandler.hpp"
+﻿#include "VRCIPv6Blocker.h"
+#include "YDKWinUtils.h"
+#include "SubClassEditHandler.h"
 #include <CommDlg.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
@@ -190,6 +190,7 @@ void VRCIPv6BlockerApp::LoadSetting() {
 	m_Setting.uAutoShutdown = ::GetPrivateProfileIntW(APP_NAME, IK_AUTOSHUTDOWN, BST_CHECKED, iniPath.c_str());
 	m_Setting.uMinWindow = ::GetPrivateProfileIntW(APP_NAME, IK_MINWINDOW, BST_UNCHECKED, iniPath.c_str());
 	m_Setting.uFirewallBlock = ::GetPrivateProfileIntW(APP_NAME, IK_FIREWALLBLOCK, BST_CHECKED, iniPath.c_str());
+	m_Setting.uNonBlocking = ::GetPrivateProfileIntW(APP_NAME, IK_NONBLOCKING, BST_UNCHECKED, iniPath.c_str());
 	WCHAR szPath[MAX_PATH];
 	::GetPrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, L"", szPath, std::size(szPath), iniPath.c_str());
 	m_Setting.strExecutePath = szPath;
@@ -211,6 +212,8 @@ void VRCIPv6BlockerApp::SaveSetting() {
 	::WritePrivateProfileStringW(APP_NAME, IK_MINWINDOW, szFormat, iniPath.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uFirewallBlock);
 	::WritePrivateProfileStringW(APP_NAME, IK_FIREWALLBLOCK, szFormat, iniPath.c_str());
+	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uNonBlocking);
+	::WritePrivateProfileStringW(APP_NAME, IK_NONBLOCKING, szFormat, iniPath.c_str());
 	::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), iniPath.c_str());
 	m_Logger->Log(L"設定を書込みました");
 	DumpSetting();
@@ -240,11 +243,12 @@ void VRCIPv6BlockerApp::DumpSetting() {
 	WCHAR szLog[384];
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
-		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), strExecutePath(%s)",
+		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u), strExecutePath(%s)",
 		m_Setting.uRunVRC,
 		m_Setting.uAutoShutdown,
 		m_Setting.uMinWindow,
 		m_Setting.uFirewallBlock,
+		m_Setting.uNonBlocking,
 		m_Setting.strExecutePath.c_str());
 	m_Logger->Log(szLog);
 }

@@ -1,6 +1,5 @@
 ﻿#pragma once
-
-#include "ISubclass.hpp"
+#include "ISubclass.h"
 
 class SubclassEditHandler : public ydkns::SubclassHandler {
 public:

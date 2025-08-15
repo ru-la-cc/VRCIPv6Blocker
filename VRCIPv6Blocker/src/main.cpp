@@ -1,5 +1,5 @@
-﻿#include "VRCIPv6Blocker.hpp"
-#include "AppMutex.hpp"
+﻿#include "VRCIPv6Blocker.h"
+#include "AppMutex.h"
 
 #define MUTEX_NAME (L"Global\\{31952356-61C8-42F9-9D19-AC73E9AF5ED5}_VRCIPv6Blocker")
 

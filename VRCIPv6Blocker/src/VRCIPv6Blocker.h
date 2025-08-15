@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include "DialogBase.hpp"
-#include "FileLogger.hpp"
-#include "ISubclass.hpp"
-#include "ComInitializer.hpp"
+#include "DialogBase.h"
+#include "FileLogger.h"
+#include "ISubclass.h"
+#include "ComInitializer.h"
 #include <vector>
 #include "../resource.h"
 
@@ -13,6 +13,7 @@ public:
 		UINT uAutoShutdown;
 		UINT uMinWindow;
 		UINT uFirewallBlock;
+		UINT uNonBlocking;
 		std::wstring strExecutePath;
 	};
 
@@ -23,6 +24,8 @@ public:
 	LPCWSTR IK_MINWINDOW = L"MinWindow";
 	LPCWSTR IK_FIREWALLBLOCK = L"FirewallBlock";
 	LPCWSTR IK_EXECUTEPATH = L"Execute";
+	LPCWSTR IK_NONBLOCKING = L"NonBlocking";
+
 	virtual ~VRCIPv6BlockerApp();
 	inline ydkns::IFileLogger<WCHAR>* Logger() { return m_Logger; }
 	const std::wstring& GetCurrentFile() const { return m_currentFile; }
