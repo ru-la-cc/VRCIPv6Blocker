@@ -58,12 +58,18 @@ private:
 	bool m_isAutoRun = false;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
+	CRITICAL_SECTION m_tidCs;
 	DWORD m_vrcProcessId = 0;
+	CRITICAL_SECTION m_tCs;
+	bool m_isStop = false;
+	HANDLE m_hMonThread = nullptr;
+	HANDLE m_hWaitThread = nullptr;
 
 	// 設定関連
 	INI_SETTING m_Setting;
 
-	static unsigned __stdcall ProcessExitNotifyThread(void* param); // ぶいちゃの終了を待つワーカースレッド
+	static unsigned __stdcall VRCMonitoringThread(void* param);
+	static unsigned __stdcall ProcessExitNotifyThread(void* param);
 
 	VRCIPv6BlockerApp();
 	void LoadBlockList();
@@ -75,4 +81,8 @@ private:
 	void CheckDialogControl();
 	[[nodiscard]] DWORD GetVRChatProcess();
 	void VRCExecuter();
+	void SetStopFlag(bool isStop);
+	bool GetStopFlag();
+	void SetVRCProcessId(DWORD dwProcessId);
+	DWORD GetVRCProcessId();
 };

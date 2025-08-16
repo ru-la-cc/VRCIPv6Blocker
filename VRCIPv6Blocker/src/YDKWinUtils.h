@@ -12,4 +12,5 @@ namespace ydk {
 	[[nodiscard]] FILE* OpenReadFile(LPCWSTR lpFileName);
 	[[nodiscard]] FILE* OpenWriteFile(LPCWSTR lpFileName);
 	[[nodiscard]] std::wstring GetErrorMessage(DWORD dwError);
+	void GetAppVersion(PWORD pV1, PWORD pV2, PWORD pV3, PWORD pV4);
 }
