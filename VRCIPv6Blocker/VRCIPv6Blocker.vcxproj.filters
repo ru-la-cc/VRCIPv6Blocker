@@ -48,7 +48,7 @@
     <ClInclude Include="src\ProcessWaiter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="src\ProcessExecuter.h">
+    <ClInclude Include="src\UserProcessLauncher.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -74,7 +74,7 @@
     <ClCompile Include="src\SubclassEditHandler.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="src\ProcessExecuter.cpp">
+    <ClCompile Include="src\UserProcessLauncher.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
