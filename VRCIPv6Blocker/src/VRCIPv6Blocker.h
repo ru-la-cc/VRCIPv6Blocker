@@ -18,6 +18,8 @@ public:
 		std::wstring strVRCFile;
 	};
 
+	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
+
 	LPCWSTR APP_NAME = L"VRCIPv6Blocker";
 	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
 	LPCWSTR IK_RUNVRC = L"RunVRC";
@@ -32,7 +34,7 @@ public:
 	inline ydk::IFileLogger<WCHAR>* Logger() { return m_Logger; }
 	const std::wstring& GetCurrentFile() const { return m_currentFile; }
 
-	constexpr UINT GetMainDialogID() const override { return IDD_MAINDLG; }
+	inline constexpr UINT GetMainDialogID() const override { return IDD_MAINDLG; }
 	bool OnInitialize() override;
 	void OnShutdown() override;
 
@@ -56,9 +58,12 @@ private:
 	bool m_isAutoRun = false;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
+	DWORD m_vrcProcessId;
 
 	// 設定関連
 	INI_SETTING m_Setting;
+
+	static unsigned __stdcall ProcessExitNotifyThread(void* param); // ぶいちゃの終了を待つワーカースレッド
 
 	VRCIPv6BlockerApp();
 	void LoadBlockList();
@@ -68,4 +73,6 @@ private:
 	void SetSetting();
 	void DumpSetting();
 	void CheckDialogControl();
+	DWORD GetVRChatProcess();
+	void VRCExecuter();
 };

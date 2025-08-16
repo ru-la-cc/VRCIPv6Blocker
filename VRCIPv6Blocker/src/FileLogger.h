@@ -27,7 +27,7 @@ namespace ydk {
 			::LeaveCriticalSection(&m_setterCritical);
 		}
 
-		[[nodiscard]] constexpr DWORD GetError() const { return m_dwError; }
+		[[nodiscard]] inline constexpr DWORD GetError() const { return m_dwError; }
 	private:
 		bool m_isAppend, m_isAutoFlush;
 		WCHAR m_filePath[MAX_PATH];
