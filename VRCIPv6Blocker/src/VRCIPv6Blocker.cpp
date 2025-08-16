@@ -1,15 +1,17 @@
 ﻿#include "VRCIPv6Blocker.h"
 #include "YDKWinUtils.h"
 #include "SubClassEditHandler.h"
+#include "ProcessWaiter.h"
 #include <CommDlg.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
+#include <tlhelp32.h>
 
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Comdlg32.lib")
 
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
-    // デストラクタ（シングルトンだからコンストラクタはprivate↓）
+    // デストラクタ（コンストラクタはprivate↓）
 	if (m_lpArgList != nullptr) {
 		::LocalFree(m_lpArgList);
 	}
@@ -18,7 +20,6 @@ VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
 
 bool VRCIPv6BlockerApp::OnInitialize() {
     // アプリケーション初期化
-
 	return true;
 }
 
@@ -36,6 +37,17 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	LoadBlockList();
 	LoadSetting();
 	SetSetting();
+
+	m_vrcProcessId = GetVRChatProcess();
+
+	if (m_vrcProcessId) {
+		m_Logger->LogWarning(L"VRChatが既に起動中");
+		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChat起動中");
+	}
+	else {
+		m_Logger->Log(L"VRChatは起動していません");
+		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatは起動していません");
+	}
 
 	if (m_Setting.uNonBlocking == BST_CHECKED) {
 		WCHAR szCaption[64];
@@ -93,6 +105,27 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 }
 
 // private
+
+unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
+	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
+
+	constexpr int MAX_RETRY = 10;
+	constexpr DWORD MAX_SLEEP = 1000;
+	int retry = 0;
+	DWORD dwSleepMs = 50;
+	while (!::PostMessageW(app->m_hWnd, WM_VRCEXIT, 0, 0)) {
+		DWORD dwError = ::GetLastError();
+		if (dwError == ERROR_INVALID_WINDOW_HANDLE || dwError == ERROR_ACCESS_DENIED) {
+			app->m_Logger->LogError(ydk::GetErrorMessage(dwError).c_str());
+		}
+		if (++retry > MAX_RETRY) break;
+		::Sleep(dwSleepMs);
+		dwSleepMs *= 2;
+		if (dwSleepMs > MAX_SLEEP) dwSleepMs = MAX_SLEEP;
+	}
+
+	return 0;
+}
 
 VRCIPv6BlockerApp* VRCIPv6BlockerApp::Instance() {
     static VRCIPv6BlockerApp app = VRCIPv6BlockerApp();
@@ -288,4 +321,34 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	}
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), m_Setting.uFirewallBlock == BST_CHECKED);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), m_Setting.uFirewallBlock != BST_CHECKED);
+}
+
+DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
+	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE) {
+		return 0;
+	}
+
+	PROCESSENTRY32W pe32;
+	pe32.dwSize = sizeof(PROCESSENTRY32W);
+
+	DWORD processId = 0;
+	if (Process32FirstW(hSnapshot, &pe32)) {
+		do {
+			if (_wcsicmp(pe32.szExeFile,
+					m_Setting.strVRCFile.length() > 0 ?
+					m_Setting.strVRCFile.c_str() :
+					VRCFILENAME) == 0) {
+				processId = pe32.th32ProcessID;
+				break;
+			}
+		} while (Process32NextW(hSnapshot, &pe32));
+	}
+
+	CloseHandle(hSnapshot);
+	return processId;
+}
+
+void VRCIPv6BlockerApp::VRCExecuter() {
+
 }

@@ -122,6 +122,9 @@ namespace ydk {
 
 		char szMessage[2048]; // まぁこれだけあれば足りるだろうし...
 		ydk::ToUtf8(lpMessage, szMessage, sizeof(szMessage));
+		for (char* p = szMessage; *p; ++p) {
+			if (*p == '\r' || *p == '\n' || *p == '\t') *p = ' '; // お前ら全部半角スペースになれ
+		}
 
 		DWORD dwWrite;
 		if (!::WriteFile(m_hFile, szTimeStampAndType,

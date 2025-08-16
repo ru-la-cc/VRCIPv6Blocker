@@ -97,4 +97,26 @@ namespace ydk {
 		return pfile;
 	}
 
+	std::wstring GetErrorMessage(DWORD dwError) {
+		WCHAR szMessage[1024];
+		std::wstring resultMessage;
+
+		if (::FormatMessageW(
+				FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS,
+				nullptr,
+				dwError,
+				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+				szMessage,
+				std::size(szMessage),
+				nullptr)) {
+			szMessage[std::size(szMessage) - 1] = L'\0'; // バッファオーバーしても\0つくかわからんし失敗として戻るのかわからんから保険的に...
+		}
+		else {
+			// しかしエラーメッセージ取りに行く処理でエラーになるとか滑稽だな
+			::swprintf_s(szMessage, L"FormatMessage Error = %lu", ::GetLastError());
+		}
+		
+		return { szMessage };
+	}
 }
