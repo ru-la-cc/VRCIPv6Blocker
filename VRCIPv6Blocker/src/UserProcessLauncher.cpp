@@ -449,7 +449,6 @@ namespace ydk {
 				si.lpDesktop = const_cast<LPWSTR>(L"winsta0\\default");
 				si.dwFlags |= STARTF_USESHOWWINDOW;
 				si.wShowWindow = (WORD)showCmd;
-
 				PROCESS_INFORMATION pi{};
 				std::wstring mutableCmd = fullCmd; // 可変バッファ
 				BOOL ok = CreateProcessWithTokenW(

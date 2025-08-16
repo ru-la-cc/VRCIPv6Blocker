@@ -1,7 +1,11 @@
 ﻿#include "YDKWinUtils.h"
+#include <winver.h>
 #include <iterator>
 #include <fcntl.h>
 #include <io.h>
+#include <memory>
+
+#pragma comment(lib, "version.lib")
 
 namespace ydk {
 	std::wstring GetModuleDir(HMODULE hModule) {
@@ -118,5 +122,45 @@ namespace ydk {
 		}
 		
 		return { szMessage };
+	}
+
+	void GetAppVersion(PWORD pV1, PWORD pV2, PWORD pV3, PWORD pV4) {
+		DWORD dwTemp;
+		UINT uSize;
+		VS_FIXEDFILEINFO vfi;
+		WCHAR szFile[MAX_PATH];
+		LPVOID lpvBuf;
+		auto hModule = ::GetModuleHandleW(nullptr);
+		::GetModuleFileNameW(hModule, szFile, std::size(szFile));
+		szFile[std::size(szFile) - 1] = L'\0'; // なんかVista以降は必ずつくらしいが...
+
+		uSize = ::GetFileVersionInfoSizeW(szFile, &dwTemp);
+		std::unique_ptr<BYTE[]> lpBuf;
+		if (uSize) {
+			lpBuf = std::make_unique<BYTE[]>(uSize);
+		}
+		else {
+			if (pV1 != nullptr) *pV1 = 0;
+			if (pV2 != nullptr) *pV2 = 0;
+			if (pV3 != nullptr) *pV3 = 0;
+			if (pV4 != nullptr) *pV4 = 0;
+			return;
+		}
+
+		if (::GetFileVersionInfoW(szFile, 0 , uSize, lpBuf.get()) &&
+			::VerQueryValueW(lpBuf.get(), L"\\", &lpvBuf, &uSize)
+			) {
+			CopyMemory(&vfi, lpvBuf, sizeof(vfi));
+			if (pV1 != nullptr) *pV1 = static_cast<WORD>(vfi.dwFileVersionMS >> 16);
+			if (pV2 != nullptr) *pV2 = static_cast<WORD>(vfi.dwFileVersionMS & 0x0000FFFF);
+			if (pV3 != nullptr) *pV3 = static_cast<WORD>(vfi.dwFileVersionLS >> 16);
+			if (pV4 != nullptr) *pV4 = static_cast<WORD>(vfi.dwFileVersionLS & 0x0000FFFF);
+		}
+		else {
+			if (pV1 != nullptr) *pV1 = 0;
+			if (pV2 != nullptr) *pV2 = 0;
+			if (pV3 != nullptr) *pV3 = 0;
+			if (pV4 != nullptr) *pV4 = 0;
+		}
 	}
 }

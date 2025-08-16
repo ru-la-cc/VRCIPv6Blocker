@@ -7,12 +7,16 @@
 #include <Shlwapi.h>
 #include <strsafe.h>
 #include <tlhelp32.h>
+#include <process.h>
 
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Comdlg32.lib")
 
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
     // デストラクタ（コンストラクタはprivate↓）
+	::DeleteCriticalSection(&m_tidCs);
+	::DeleteCriticalSection(&m_tCs);
+
 	if (m_lpArgList != nullptr) {
 		::LocalFree(m_lpArgList);
 	}
@@ -34,14 +38,19 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
     // まぁこのあたりに初期化処理を書く予定
 	m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
 	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
+	WORD v1, v2, v3, v4;
+	ydk::GetAppVersion(&v1, &v2, &v3, &v4);
+	WCHAR szVer[32];
+	::swprintf_s(szVer, L"%u.%u.%u(%u)", v1, v2, v3, v4);
+	::SetDlgItemTextW(m_hWnd, IDC_STATIC_VERSION, szVer);
 
 	LoadBlockList();
 	LoadSetting();
 	SetSetting();
 
-	m_vrcProcessId = GetVRChatProcess();
+	SetVRCProcessId(GetVRChatProcess());
 
-	if (m_vrcProcessId) {
+	if (GetVRCProcessId()) {
 		m_Logger->LogWarning(L"VRChatが既に起動中");
 		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChat起動中");
 	}
@@ -60,6 +69,13 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 		::SetWindowTextW(m_hWnd, APP_NAME);
 	}
 
+	m_hMonThread = reinterpret_cast<HANDLE>(::_beginthreadex(nullptr, 0, VRCMonitoringThread, this, 0, nullptr));
+	if (m_hMonThread == nullptr) {
+		auto err = ydk::GetErrorMessage(::GetLastError());
+		m_Logger->LogError(L"監視用のワーカースレッドが起動できなかった...");
+		m_Logger->LogError((L"GetLastError = " + err).c_str());
+		::MessageBox(m_hWnd, L"VRChatの監視スレッドが起動できませんでした\nたぶん役に立たないので閉じてください", L"エラー", MB_ICONERROR | MB_OK);
+	}
     return TRUE;
 }
 
@@ -83,7 +99,7 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
     switch (LOWORD(wParam)) {
 	case IDC_BUTTON_RUNVRC:
 		::Sleep(100);
-		if (m_vrcProcessId) {
+		if (GetVRCProcessId()) {
 			m_Logger->LogWarning(L"すでに起動中ですが");
 		}
 		else {
@@ -100,6 +116,11 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 }
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
+	if (GetStopFlag()) {
+		SetStopFlag(true);
+		// 一応スレッド終了待ち
+		::Sleep(1000);
+	}
     return ydk::DialogAppBase::OnClose(hDlg);
 }
 
@@ -107,6 +128,23 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
     WPARAM wParam, LPARAM lParam) {
     switch (message) {
         // ウインドウメッセージの処理をこの辺に書く予定
+	case WM_VRCEXIT:
+		if (wParam) {
+			m_Logger->LogError(L"VRChatが変な終わり方しました");
+		}
+		else {
+			WCHAR szLog[256];
+			::swprintf_s(szLog, L"VRChatが終了しました(終了コード:%lu)", static_cast<DWORD>(lParam));
+			m_Logger->Log(szLog);
+		}
+		if (m_hWaitThread != nullptr) {
+			::CloseHandle(m_hWaitThread);
+			m_hWaitThread = nullptr;
+		}
+		if (m_Setting.uAutoShutdown == BST_CHECKED) {
+			m_Logger->Log(L"自動終了によりアプリの終了を開始します");
+			::SendMessage(m_hWnd, WM_CLOSE, 0, 0);
+		}
     return TRUE;
     }
 
@@ -115,13 +153,55 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 
 // private
 
-// プロセス終了待ちのワーカースレッド
+// ぶいちゃの起動状態を監視するワーカースレッド
+unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
+	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
+	app->SetStopFlag(false);
+	bool isRunning = false;
+	while (!app->GetStopFlag()) {
+		if (app->GetVRCProcessId()) {
+			if (!isRunning) {
+				isRunning = true;
+				::SetDlgItemText(app->m_hWnd, IDC_STATIC_STATUS, L"VRChat起動中");
+			}
+		}
+		else {
+			if(isRunning) {
+				isRunning = false;
+				::SetDlgItemText(app->m_hWnd, IDC_STATIC_STATUS, L"VRChatは起動していません");
+			}
+		}
+
+		app->SetVRCProcessId(app->GetVRChatProcess());
+		if (app->m_hWaitThread == nullptr && app->GetVRCProcessId()) {
+			app->m_hWaitThread = reinterpret_cast<HANDLE>(::_beginthreadex(nullptr, 0, ProcessExitNotifyThread, app, 0, nullptr));
+			if (app->m_hWaitThread == nullptr) {
+				auto err = ydk::GetErrorMessage(::GetLastError());
+				app->m_Logger->LogError(L"待機用のワーカースレッドが起動できなかった...");
+				app->m_Logger->LogError((L"GetLastError = " + err).c_str());
+				::MessageBox(app->m_hWnd, L"VRChatの終了待機用スレッドが起動できませんでした\n自動では終了しないためアプリを閉じる場合は×で閉じてください", L"エラー", MB_ICONERROR | MB_OK);
+			}
+		}
+		::Sleep(1000);
+	}
+	::_endthreadex(0);
+	return 0;
+}
+
+// ぶいちゃの終了を待つワーカースレッド
 unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
 	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
 
-	ydk::ProcessWaiter pw(app->m_vrcProcessId);
+	ydk::ProcessWaiter pw(app->GetVRCProcessId());
 
-	pw.Wait(); // 起動してなかったらすぐ制御返すはず
+	auto result = pw.Wait(); // 起動してなかったらすぐ制御返すはず
+	if (!pw.IsValid()) {
+		app->m_Logger->LogError(L"VRChatのプロセスハンドル開けてないんだが？");
+	}
+	WCHAR szResult[128];
+	::swprintf_s(szResult, L"wait result = 0x%08X(%lu)", result, result);
+	app->m_Logger->Log(szResult);
+	app->SetVRCProcessId(0);
 	DWORD dwExitCode;
 	auto isSuccess = pw.ExitCode(dwExitCode);
 
@@ -144,7 +224,7 @@ unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
 		dwSleepMs *= 2;
 		if (dwSleepMs > MAX_SLEEP) dwSleepMs = MAX_SLEEP;
 	}
-
+	::_endthreadex(0);
 	return 0;
 }
 
@@ -173,6 +253,9 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 		}
 	}
 	if (m_isAutoRun) m_Logger->Log(L"VRChatを自動実行 ... できたらします");
+
+	::InitializeCriticalSection(&m_tCs);
+	::InitializeCriticalSection(&m_tidCs);
 }
 
 // ブロックリストの読込
@@ -371,18 +454,53 @@ DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
 }
 
 void VRCIPv6BlockerApp::VRCExecuter() {
-	if (m_vrcProcessId) {
+	if (GetVRCProcessId()) {
 		m_Logger->LogError(L"既に起動してるので起動しないでほしい");
 		return;
 	}
-	m_vrcProcessId = ydk::ShellExecuteWithLoginUser(m_Setting.strExecutePath.c_str());
-	if (!m_vrcProcessId) {
+	auto pid = ydk::ShellExecuteWithLoginUser(m_Setting.strExecutePath.c_str());
+	if (!pid) {
 		m_Logger->LogError(L"起動できませんでした");
 		::MessageBoxW(m_hWnd, L"起動できませんでした", L"エラー", MB_ICONERROR | MB_OK);
 	}
 	else {
 		WCHAR szMsg[256];
-		::swprintf_s(szMsg, L"プロセスID(%lu)で起動しました", m_vrcProcessId);
+		::swprintf_s(szMsg, L"プロセスID(%lu)で起動しました(ランチャーの可能性もあるからこのPIDは信用できん)", pid);
 		m_Logger->Log(szMsg);
+		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatの起動待ち...");
+		// m_hWaitThread = reinterpret_cast<HANDLE>(::_beginthreadex(nullptr, 0, ProcessExitNotifyThread, this, 0, nullptr));
+		// if (m_hWaitThread == nullptr) {
+		// 	auto err = ydk::GetErrorMessage(::GetLastError());
+		// 	m_Logger->LogError(L"待機用のワーカースレッドが起動できなかった...");
+		// 	m_Logger->LogError((L"GetLastError = " + err).c_str());
+		// 	::MessageBox(m_hWnd, L"VRChatの終了待機用スレッドが起動できませんでした\n自動では終了しないためアプリを閉じる場合は×で閉じてください", L"エラー", MB_ICONERROR | MB_OK);
+		// }
 	}
+}
+void VRCIPv6BlockerApp::SetStopFlag(bool isStop)
+{
+	::EnterCriticalSection(&m_tidCs);
+	m_isStop = isStop;
+	::LeaveCriticalSection(&m_tidCs);
+}
+
+bool VRCIPv6BlockerApp::GetStopFlag()
+{
+	::EnterCriticalSection(&m_tidCs);
+	bool isStop = m_isStop;
+	::LeaveCriticalSection(&m_tidCs);
+	return isStop;
+}
+
+void VRCIPv6BlockerApp::SetVRCProcessId(DWORD dwProcessId) {
+	::EnterCriticalSection(&m_tCs);
+	m_vrcProcessId = dwProcessId;
+	::LeaveCriticalSection(&m_tCs);
+}
+
+DWORD VRCIPv6BlockerApp::GetVRCProcessId() {
+	::EnterCriticalSection(&m_tCs);
+	DWORD result = m_vrcProcessId;
+	::LeaveCriticalSection(&m_tCs);
+	return result;
 }
