@@ -58,7 +58,7 @@ private:
 	bool m_isAutoRun = false;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
-	DWORD m_vrcProcessId;
+	DWORD m_vrcProcessId = 0;
 
 	// 設定関連
 	INI_SETTING m_Setting;
@@ -73,6 +73,6 @@ private:
 	void SetSetting();
 	void DumpSetting();
 	void CheckDialogControl();
-	DWORD GetVRChatProcess();
+	[[nodiscard]] DWORD GetVRChatProcess();
 	void VRCExecuter();
 };

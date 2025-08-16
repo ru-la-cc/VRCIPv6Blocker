@@ -2,6 +2,7 @@
 #include "YDKWinUtils.h"
 #include "SubClassEditHandler.h"
 #include "ProcessWaiter.h"
+#include "ProcessExecuter.h"
 #include <CommDlg.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
@@ -53,7 +54,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 		WCHAR szCaption[64];
 		::swprintf_s(szCaption, L"%s (NonBlock)", APP_NAME);
 		::SetWindowTextW(m_hWnd, szCaption);
-		m_Logger->LogWarning(L"IPv6をブロックしない名前と相反する動作をします");
+		m_Logger->LogWarning(L"IPv6をブロックしないアプリ名と相反する動作をします");
 	}
 	else {
 		::SetWindowTextW(m_hWnd, APP_NAME);
@@ -65,7 +66,6 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 	switch (HIWORD(wParam)) {
 	case BN_CLICKED:
-		m_Logger->Log(L"BN_CLICKED");
 		switch (LOWORD(wParam)) {
 		case IDC_CHECK_RUNVRC:
 			::EnableWindow(::GetDlgItem(m_hWnd,
@@ -81,6 +81,15 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 	}
 
     switch (LOWORD(wParam)) {
+	case IDC_BUTTON_RUNVRC:
+		::Sleep(100);
+		if (m_vrcProcessId) {
+			m_Logger->LogWarning(L"すでに起動中ですが");
+		}
+		else {
+			VRCExecuter();
+		}
+		return TRUE;
 	case IDC_BUTTON_SAVE:
 		GetSetting();
 		SaveSetting();
@@ -106,14 +115,26 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 
 // private
 
+// プロセス終了待ちのワーカースレッド
 unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
 	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
 
+	ydk::ProcessWaiter pw(app->m_vrcProcessId);
+
+	pw.Wait(); // 起動してなかったらすぐ制御返すはず
+	DWORD dwExitCode;
+	auto isSuccess = pw.ExitCode(dwExitCode);
+
+	// メッセージ送るところ
 	constexpr int MAX_RETRY = 10;
 	constexpr DWORD MAX_SLEEP = 1000;
 	int retry = 0;
 	DWORD dwSleepMs = 50;
-	while (!::PostMessageW(app->m_hWnd, WM_VRCEXIT, 0, 0)) {
+	while (!::PostMessageW(
+			app->m_hWnd, WM_VRCEXIT,
+			static_cast<WPARAM>(!isSuccess), // WPARAMはExitCode成功時に0を設定させたい
+			static_cast<LPARAM>(dwExitCode))) // WPARAMが0でなければこの値は未定義、つまり何なのか知らん
+	{
 		DWORD dwError = ::GetLastError();
 		if (dwError == ERROR_INVALID_WINDOW_HANDLE || dwError == ERROR_ACCESS_DENIED) {
 			app->m_Logger->LogError(ydk::GetErrorMessage(dwError).c_str());
@@ -350,5 +371,18 @@ DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
 }
 
 void VRCIPv6BlockerApp::VRCExecuter() {
-
+	if (m_vrcProcessId) {
+		m_Logger->LogError(L"既に起動してるので起動しないでほしい");
+		return;
+	}
+	m_vrcProcessId = ydk::ShellExecuteWithLoginUser(m_Setting.strExecutePath.c_str());
+	if (!m_vrcProcessId) {
+		m_Logger->LogError(L"起動できませんでした");
+		::MessageBoxW(m_hWnd, L"起動できませんでした", L"エラー", MB_ICONERROR | MB_OK);
+	}
+	else {
+		WCHAR szMsg[256];
+		::swprintf_s(szMsg, L"プロセスID(%lu)で起動しました", m_vrcProcessId);
+		m_Logger->Log(szMsg);
+	}
 }
