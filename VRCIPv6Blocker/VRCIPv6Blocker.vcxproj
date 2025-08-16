@@ -140,7 +140,7 @@
     <ClInclude Include="src\FileLogger.h" />
     <ClInclude Include="src\ILogger.h" />
     <ClInclude Include="src\ISubclass.h" />
-    <ClInclude Include="src\ProcessExecuter.h" />
+    <ClInclude Include="src\UserProcessLauncher.h" />
     <ClInclude Include="src\ProcessWaiter.h" />
     <ClInclude Include="src\SubclassEditHandler.h" />
     <ClInclude Include="src\VRCIPv6Blocker.h" />
@@ -150,7 +150,7 @@
     <ClCompile Include="src\DialogBase.cpp" />
     <ClCompile Include="src\FileLogger.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\ProcessExecuter.cpp" />
+    <ClCompile Include="src\UserProcessLauncher.cpp" />
     <ClCompile Include="src\Subclass.cpp" />
     <ClCompile Include="src\SubclassEditHandler.cpp" />
     <ClCompile Include="src\VRCIPv6Blocker.cpp">

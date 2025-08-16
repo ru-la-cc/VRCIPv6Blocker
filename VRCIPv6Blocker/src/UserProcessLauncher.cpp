@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <memory>
 
-#include "ProcessExecuter.h"
+#include "UserProcessLauncher.h"
 #include "ComInitializer.h"
 
 #pragma comment(lib, "ole32.lib")
@@ -265,7 +265,7 @@ namespace ydk {
 			}
 		}
 
-		// 4) 拡張子ホワイトリスト
+		// 4) 拡張子ホワイトリスト(exe,lnk,urlだけでいいと思うんやが...)
 		const std::wstring ext = ext_of(tmp);
 		const bool ok =
 			(ext == L".exe" || ext == L".lnk" || ext == L".url" ||
@@ -280,8 +280,122 @@ namespace ydk {
 		}
 		return true;
 	}
+	// --- 環境変数展開 ---
+	inline std::wstring ExpandEnvVars(const std::wstring& s) {
+		DWORD need = ExpandEnvironmentStringsW(s.c_str(), nullptr, 0);
+		if (need == 0) return s;
+		std::wstring out(need, L'\0');
+		DWORD n = ExpandEnvironmentStringsW(s.c_str(), out.data(), need);
+		if (n == 0) return s;
+		if (!out.empty() && out.back() == L'\0') out.pop_back();
+		return out;
+	}
 
-	// ---- 本体 ----
+	// --- コマンドテンプレートのプレースホルダ置換（%1, %L, %l, %u, %U, %* を扱う）---
+	inline std::wstring ReplacePlaceholders(const std::wstring& tmpl, const std::wstring& urlQuoted) {
+		std::wstring out; out.reserve(tmpl.size() + urlQuoted.size() + 8);
+		for (size_t i = 0; i < tmpl.size(); ) {
+			if (tmpl[i] == L'%' && i + 1 < tmpl.size()) {
+				wchar_t t = tmpl[i + 1];
+				if (t == L'1' || t == L'L' || t == L'l' || t == L'u' || t == L'U') {
+					out += urlQuoted; i += 2; continue;
+				}
+				else if (t == L'*') {
+					out += urlQuoted; i += 2; continue;
+				}
+			}
+			out.push_back(tmpl[i++]);
+		}
+		// どの置換も行われなかった場合は、末尾に URL を付けて互換を確保
+		if (out.find(urlQuoted) == std::wstring::npos) {
+			out += L' ';
+			out += urlQuoted;
+		}
+		return out;
+	}
+
+	// --- CommandLine 文字列から先頭実行ファイルパスを抽出 ---
+	inline bool ExtractExeFromCommand(const std::wstring& cmd, std::wstring& outExe) {
+		int argc = 0;
+		LPWSTR* argv = CommandLineToArgvW(cmd.c_str(), &argc);
+		if (!argv || argc < 1) { if (argv) LocalFree(argv); return false; }
+		outExe.assign(argv[0]);
+		LocalFree(argv);
+		return !outExe.empty();
+	}
+
+	// --- URL スキーム → 実行 EXE と完全コマンドラインに解決 ---
+	inline bool ResolveProtocolCommand(const std::wstring& url,
+		std::wstring& outExe,
+		std::wstring& outCmdLine,
+		std::wstring& outWorkDir)
+	{
+		// スキームを切り出し
+		size_t pos = url.find(L':');
+		if (pos == std::wstring::npos || pos == 0) { SetLastError(ERROR_INVALID_PARAMETER); return false; }
+		std::wstring scheme = tolower_copy(url.substr(0, pos));
+
+		// open コマンドテンプレート取得（例: "C:\Path\App.exe" --flag "%1"）
+		wchar_t buf[4096] = {};
+		DWORD cch = (DWORD)std::size(buf);
+		HRESULT hr = AssocQueryStringW(ASSOCF_NONE, ASSOCSTR_COMMAND, scheme.c_str(), L"open", buf, &cch);
+		if (FAILED(hr) || !buf[0]) {
+			SetLastError(ERROR_NOT_SUPPORTED); // 登録なし or AppX 専用など
+			return false;
+		}
+
+		std::wstring tmpl = ExpandEnvVars(buf);
+		// URL を Windows 規約でクォート
+		std::wstring urlQ = QuoteArgWin(url);
+
+		// プレースホルダ置換
+		std::wstring fullCmd = ReplacePlaceholders(tmpl, urlQ);
+
+		// 先頭 EXE 抽出（rundll32.exe 等も含む）
+		std::wstring exe;
+		if (!ExtractExeFromCommand(fullCmd, exe)) {
+			SetLastError(ERROR_NOT_SUPPORTED);
+			return false;
+		}
+
+		// 作業ディレクトリは EXE のあるフォルダに
+		outWorkDir = dirname_of(exe);
+		outExe = exe;
+		outCmdLine = fullCmd;
+		return true;
+	}
+
+	// --- UWP/解決不可プロトコル用: cmd.exe /c start "" URL をユーザートークンで起動 ---
+	inline bool StartUrlViaCmdFallback(HANDLE userPrimaryToken, const std::wstring& url, int nShow, DWORD& outPid) {
+		wchar_t sysdir[MAX_PATH] = {};
+		if (!GetSystemDirectoryW(sysdir, MAX_PATH)) { SetErrorOrDefault(ERROR_PATH_NOT_FOUND); return false; }
+		std::wstring cmdExe = std::wstring(sysdir) + L"\\cmd.exe";
+
+		std::wstring cmdLine = L"\""; cmdLine += cmdExe; cmdLine += L"\" /c start \"\" ";
+		cmdLine += QuoteArgWin(url);
+
+		// CreateProcessWithTokenW でユーザー権限として起動
+		STARTUPINFOW si{}; si.cb = sizeof(si);
+		si.dwFlags |= STARTF_USESHOWWINDOW; si.wShowWindow = (WORD)nShow;
+		PROCESS_INFORMATION pi{};
+		std::wstring mutableCmd = cmdLine;
+
+		BOOL ok = CreateProcessWithTokenW(userPrimaryToken, LOGON_WITH_PROFILE,
+			nullptr, mutableCmd.data(),
+			0, nullptr, nullptr, &si, &pi);
+		if (!ok) {
+			SetErrorOrDefault(ERROR_ACCESS_DENIED);
+			return false;
+		}
+		outPid = pi.dwProcessId;
+		if (pi.hThread) CloseHandle(pi.hThread);
+		if (pi.hProcess) CloseHandle(pi.hProcess);
+		return true;
+	}
+
+
+
+	// ---- 本体・・・実際に起動する時に呼ぶのはこいつだけ ----
 	// 戻り値: 起動したプロセスの PID（取得不能/既存委譲時は 0）。失敗時 0。
 	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath)
 	{
@@ -318,10 +432,58 @@ namespace ydk {
 			if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY)) { SetLastError(ERROR_FILE_NOT_FOUND); return 0; }
 		}
 		else if (ext == L".url") {
-			if (!read_url_from_urlfile(src, url)) return 0;
-			std::wstring exe = associated_exe_for_scheme(url);
-			workDir = exe.empty() ? L"" : dirname_of(exe);
+			// if (!read_url_from_urlfile(src, url)) return 0;
+			// std::wstring exe = associated_exe_for_scheme(url);
+			// workDir = exe.empty() ? L"" : dirname_of(exe);
 			// showCmd = SW_SHOWNORMAL（ハンドラ任せ）
+			if (!read_url_from_urlfile(src, url)) return 0;
+			// --- ここから差し替え：スキーム解決 → 直接起動 ---
+			std::wstring exe, fullCmd, workDir;
+			if (ResolveProtocolCommand(url, exe, fullCmd, workDir)) {
+				// 解析できた → CreateProcessWithTokenW でユーザー権限として起動
+				void* envBlockRaw = nullptr;
+				CreateEnvironmentBlock(&envBlockRaw, hUserPrimary.get(), FALSE);
+				unique_env envBlock(envBlockRaw);
+
+				STARTUPINFOW si{}; si.cb = sizeof(si);
+				si.lpDesktop = const_cast<LPWSTR>(L"winsta0\\default");
+				si.dwFlags |= STARTF_USESHOWWINDOW;
+				si.wShowWindow = (WORD)showCmd;
+
+				PROCESS_INFORMATION pi{};
+				std::wstring mutableCmd = fullCmd; // 可変バッファ
+				BOOL ok = CreateProcessWithTokenW(
+					hUserPrimary.get(), LOGON_WITH_PROFILE,
+					nullptr, mutableCmd.data(),
+					CREATE_UNICODE_ENVIRONMENT,
+					envBlock.get(),
+					workDir.empty() ? nullptr : workDir.c_str(),
+					&si, &pi);
+
+				if (!ok) {
+					// 失敗時は CreateProcessAsUserW へフォールバック
+					ok = CreateProcessAsUserW(
+						hUserPrimary.get(),
+						nullptr, mutableCmd.data(),
+						nullptr, nullptr, FALSE,
+						CREATE_UNICODE_ENVIRONMENT,
+						envBlock.get(),
+						workDir.empty() ? nullptr : workDir.c_str(),
+						&si, &pi);
+				}
+				if (!ok) { SetErrorOrDefault(ERROR_ACCESS_DENIED); return 0; }
+
+				DWORD pid = pi.dwProcessId;
+				if (pi.hThread) CloseHandle(pi.hThread);
+				if (pi.hProcess) CloseHandle(pi.hProcess);
+				return pid;
+			}
+			else {
+				// 解決できない（AppX 等）→ ユーザー権限で cmd.exe 経由の 'start' フォールバック
+				DWORD pid = 0;
+				if (!StartUrlViaCmdFallback(hUserPrimary.get(), url, showCmd, pid)) return 0;
+				return pid;
+			}
 		}
 		else {
 			targetPath = src;
