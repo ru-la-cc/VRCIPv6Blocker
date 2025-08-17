@@ -4,6 +4,8 @@
 #include <fcntl.h>
 #include <io.h>
 #include <memory>
+#include <filesystem>
+#include <atlbase.h>
 #include <wrl/client.h>
 
 #pragma comment(lib, "version.lib")
@@ -258,10 +260,60 @@ namespace ydk {
 		return true;
 	}
 
-	bool CreateShortcut(LPCWSTR lpShortcutName, LPCWSTR lpLinkPath, LPCWSTR lpWorkDir,
-		LPCWSTR lpIconFile, int nIconIndex, LPCWSTR lpArguments,
-		LPCWSTR lpDescription, int nShow, WORD wHotkey) {
-		return true;
+	bool CreateShortcut(LPCWSTR lpShortcutName, LPCWSTR lpLinkPath, LPCWSTR lpWorkDir = nullptr,
+		LPCWSTR lpIconFile = nullptr, int nIconIndex = 0, LPCWSTR lpArguments = nullptr,
+		LPCWSTR lpDescription = nullptr, int nShow = SW_SHOWNORMAL, WORD wHotkey = 0) {
+
+		if (!lpShortcutName || !*lpShortcutName || !lpLinkPath || !*lpLinkPath) {
+			SetLastError(ERROR_INVALID_PARAMETER);
+			return false;
+		}
+
+		std::filesystem::path out(lpShortcutName);
+		if (!out.has_extension() || _wcsicmp(out.extension().c_str(), L".lnk")) {
+			out.replace_extension(L".lnk");
+		}
+
+		std::error_code fec;
+		if (!out.parent_path().empty()) {
+			std::filesystem::create_directories(out.parent_path(), fec);
+		}
+
+		CComPtr<IShellLinkW> pLink;
+		CComPtr<IPersistFile> pFile;
+
+		HRESULT hr = pLink.CoCreateInstance(CLSID_ShellLink);
+		if (FAILED(hr)) return false;
+
+		hr = pLink->SetPath(lpLinkPath);
+		if (SUCCEEDED(hr)) {
+			if (lpWorkDir && *lpWorkDir) {
+				hr = pLink->SetWorkingDirectory(lpWorkDir);
+			}
+			else {
+				std::filesystem::path tgt(lpLinkPath);
+				if (tgt.has_parent_path()) {
+					pLink->SetWorkingDirectory(tgt.parent_path().c_str());
+				}
+			}
+		}
+		if (SUCCEEDED(hr) && lpIconFile && *lpIconFile) hr = pLink->SetIconLocation(lpIconFile, nIconIndex);
+		if (SUCCEEDED(hr) && lpArguments && *lpArguments) hr = pLink->SetArguments(lpArguments);
+		if (SUCCEEDED(hr) && lpDescription && *lpDescription) hr = pLink->SetDescription(lpDescription);
+		if (SUCCEEDED(hr)) hr = pLink->SetShowCmd(nShow);
+		if (SUCCEEDED(hr) && wHotkey != 0) hr = pLink->SetHotkey(wHotkey); // 下位:VK_xxx, 上位:HOTKEYF_xxx
+
+		if (SUCCEEDED(hr)) {
+			hr = pLink->QueryInterface(&pFile);
+			if (SUCCEEDED(hr)) {
+				hr = pFile->Save(out.c_str(), TRUE); // 上書き
+				if (SUCCEEDED(hr)) {
+					pFile->SaveCompleted(out.c_str());
+				}
+			}
+		}
+
+		return SUCCEEDED(hr);
 	}
 
 	bool GetKnownFolderPath(std::wstring& path, KNOWNFOLDERID folderId) {
