@@ -30,6 +30,13 @@ namespace ydk {
 	struct EnvBlockDeleter { void operator()(void* p) const noexcept { if (p) DestroyEnvironmentBlock(p); } };
 	using unique_env = std::unique_ptr<void, EnvBlockDeleter>;
 
+	bool IsWhiteListExt(LPCWSTR lpExt) {
+		for (const auto& ext : WhiteListExt) {
+			if (::_wcsicmp(lpExt, ext) == 0) return true;
+		}
+		return false;
+	}
+
 	inline void SetErrorOrDefault(DWORD defErr) { DWORD e = GetLastError(); SetLastError(e ? e : defErr); }
 
 	// ---- privilege helper ----
@@ -267,10 +274,10 @@ namespace ydk {
 
 		// 4) 拡張子ホワイトリスト(exe,lnk,urlだけでいいと思うんやが...)
 		const std::wstring ext = ext_of(tmp);
-		const bool ok =
-			(ext == L".exe" || ext == L".lnk" || ext == L".url" ||
-				ext == L".bat" || ext == L".cmd" || ext == L".com" ||
-				ext == L".msi" || ext == L".scr");
+		const bool ok = IsWhiteListExt(ext.c_str());
+			//(ext == L".exe" || ext == L".lnk" || ext == L".url" ||
+			//	ext == L".bat" || ext == L".cmd" || ext == L".com" ||
+			//	ext == L".msi" || ext == L".scr");
 		if (!ok) { SetLastError(ERROR_NOT_SUPPORTED); return false; }
 
 		// 5) ファイルの存在確認（※ここは「入力ファイルそのもの」：.lnk/.url 自体の存在もチェック）
@@ -394,16 +401,29 @@ namespace ydk {
 	}
 
 
+	// まぁこいつも汎用的に・・・か？
+	bool IsWhiteListFile(LPCWSTR lpFileName) {
+		if (lpFileName == nullptr) return false;
+		LPCWSTR lpChar = lpFileName + std::wcslen(lpFileName);
+		for (; lpChar > lpFileName; lpChar = ::CharPrevW(lpFileName, lpChar)) {
+			if(*lpChar == L'.') break;
+		}
+		for (const auto& ext : WhiteListExt) {
+			if (::_wcsicmp(lpChar, ext) == 0) return true;
+		}
+		return false;
+	}
+
 
 	// ---- 本体・・・実際に起動する時に呼ぶのはこいつだけ ----
 	// 戻り値: 起動したプロセスの PID（取得不能/既存委譲時は 0）。失敗時 0。
-	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath)
+	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath, bool isComInitialize)
 	{
 		// 入力検証（.lnk / .url 自体の存在もここでチェック）
 		if (!ValidateInputPath(lpExePath)) return 0;
 
 		// COM: 関数冒頭で一度だけ
-		ComInitializer com{ COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE };
+		auto com = isComInitialize ? std::make_unique<ComInitializer>() : nullptr;
 
 		// 必要特権の明示有効化
 		EnablePrivilege(SE_INCREASE_QUOTA_NAME);

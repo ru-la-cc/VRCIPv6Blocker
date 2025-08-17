@@ -1,4 +1,5 @@
 ﻿#include "SubclassEditHandler.h"
+#include "UserProcessLauncher.h"
 #include <iterator>
 
 LRESULT SubclassEditHandler::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -15,7 +16,9 @@ LRESULT SubclassEditHandler::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, L
 		if (hFind != INVALID_HANDLE_VALUE) {
 			::FindClose(hFind);
 			if (!(w32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-				::SendMessage(hWnd, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(szFile));
+				if (ydk::IsWhiteListFile(szFile)) {
+					::SendMessage(hWnd, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(szFile));
+				}
 			}
 		}
 		return 0;
