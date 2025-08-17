@@ -144,6 +144,7 @@
     <ClInclude Include="src\ProcessWaiter.h" />
     <ClInclude Include="src\SubclassEditHandler.h" />
     <ClInclude Include="src\VRCIPv6Blocker.h" />
+    <ClInclude Include="src\WinFirewall.h" />
     <ClInclude Include="src\YDKWinUtils.h" />
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +158,7 @@
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebug</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MultiThreaded</RuntimeLibrary>
     </ClCompile>
+    <ClCompile Include="src\WinFirewall.cpp" />
     <ClCompile Include="src\YDKWinUtils.cpp" />
   </ItemGroup>
   <ItemGroup>

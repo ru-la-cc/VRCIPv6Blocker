@@ -51,6 +51,9 @@
     <ClInclude Include="src\UserProcessLauncher.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="src\WinFirewall.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\DialogBase.cpp">
@@ -75,6 +78,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="src\UserProcessLauncher.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="src\WinFirewall.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

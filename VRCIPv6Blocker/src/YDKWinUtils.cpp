@@ -260,9 +260,9 @@ namespace ydk {
 		return true;
 	}
 
-	bool CreateShortcut(LPCWSTR lpShortcutName, LPCWSTR lpLinkPath, LPCWSTR lpWorkDir = nullptr,
-		LPCWSTR lpIconFile = nullptr, int nIconIndex = 0, LPCWSTR lpArguments = nullptr,
-		LPCWSTR lpDescription = nullptr, int nShow = SW_SHOWNORMAL, WORD wHotkey = 0) {
+	bool CreateShortcut(LPCWSTR lpShortcutName, LPCWSTR lpLinkPath, LPCWSTR lpWorkDir,
+		LPCWSTR lpIconFile, int nIconIndex, LPCWSTR lpArguments,
+		LPCWSTR lpDescription, int nShow, WORD wHotkey) {
 
 		if (!lpShortcutName || !*lpShortcutName || !lpLinkPath || !*lpLinkPath) {
 			SetLastError(ERROR_INVALID_PARAMETER);
