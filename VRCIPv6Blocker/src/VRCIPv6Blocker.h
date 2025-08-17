@@ -20,7 +20,7 @@ public:
 
 	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
 
-	LPCWSTR APP_NAME = L"VRCIPv6Blocker";
+	static constexpr LPCWSTR APP_NAME = L"VRCIPv6Blocker";
 	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
 	LPCWSTR IK_RUNVRC = L"RunVRC";
 	LPCWSTR IK_AUTOSHUTDOWN = L"AutoShutdown";
