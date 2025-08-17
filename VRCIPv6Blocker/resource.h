@@ -20,7 +20,7 @@
 #define IDC_BUTTON_IPV6                 1012
 #define IDC_CHECK_FIREWALL              1013
 #define IDC_BUTTON_MAKELINK             1014
-#define IDC_STATIC_VERSION2             1015
+#define IDC_BUTTON_DELTS                1015
 
 // Next default values for new objects
 // 
