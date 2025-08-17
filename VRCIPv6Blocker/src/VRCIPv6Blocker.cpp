@@ -24,7 +24,8 @@ VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
 }
 
 bool VRCIPv6BlockerApp::OnInitialize() {
-    // アプリケーション初期化
+	// アプリケーション初期化(コンストラクタとOnInitDialogの間の中途半端な立ち位置)
+
 	return true;
 }
 
@@ -74,7 +75,10 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 		auto err = ydk::GetErrorMessage(::GetLastError());
 		m_Logger->LogError(L"監視用のワーカースレッドが起動できなかった...");
 		m_Logger->LogError((L"GetLastError = " + err).c_str());
-		::MessageBox(m_hWnd, L"VRChatの監視スレッドが起動できませんでした\nたぶん役に立たないので閉じてください", L"エラー", MB_ICONERROR | MB_OK);
+		::MessageBox(m_hWnd,
+			L"VRChatの監視スレッドが起動できませんでした\nたぶん役に立たないので閉じてください",
+			L"エラー",
+			MB_ICONERROR | MB_OK);
 	}
     return TRUE;
 }
@@ -106,6 +110,36 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 			VRCExecuter();
 		}
 		return TRUE;
+
+	case IDC_BUTTON_REF:
+	{
+		std::wstring extensions;
+		extensions.reserve(128);
+		extensions += L"実行可能ファイル(";
+		for (int i = 0; i < std::size(ydk::WhiteListExt); ++i) {
+			if (i) extensions += L";";
+			extensions += L"*";
+			extensions += ydk::WhiteListExt[i];
+		}
+		extensions += L")";
+		extensions.append(1, L'\0');
+		for (int i = 0; i < std::size(ydk::WhiteListExt); ++i) {
+			if (i) extensions += L";";
+			extensions += L"*";
+			extensions += ydk::WhiteListExt[i];
+		}
+		extensions.append(2, L'\0');
+
+		WCHAR szFileName[MAX_PATH] = L"\0";
+		if (ydk::OpenFileName(m_hWnd, szFileName, std::size(szFileName), L"起動用ショートカットかプログラム",
+			OFN_FILEMUSTEXIST | OFN_HIDEREADONLY,
+			extensions.c_str()
+		)) {
+			::SetDlgItemTextW(m_hWnd, IDC_EDIT_LINK, szFileName);
+		}
+	}
+	return TRUE;
+
 	case IDC_BUTTON_SAVE:
 		GetSetting();
 		SaveSetting();
@@ -119,7 +153,7 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 	if (GetStopFlag()) {
 		SetStopFlag(true);
 		// 一応スレッド終了待ち
-		::Sleep(1000);
+		::Sleep(PROCESS_MONITOR_INTERVAL);
 	}
     return ydk::DialogAppBase::OnClose(hDlg);
 }
@@ -155,6 +189,8 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 
 // ぶいちゃの起動状態を監視するワーカースレッド
 unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
+	constexpr int SLEEP_CYCLES = 10;
+	ydk::ComInitializer comInitializer; // com使ってないと思うけど一応保険として入れておこう
 	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
 	app->SetStopFlag(false);
 	bool isRunning = false;
@@ -179,10 +215,16 @@ unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
 				auto err = ydk::GetErrorMessage(::GetLastError());
 				app->m_Logger->LogError(L"待機用のワーカースレッドが起動できなかった...");
 				app->m_Logger->LogError((L"GetLastError = " + err).c_str());
-				::MessageBox(app->m_hWnd, L"VRChatの終了待機用スレッドが起動できませんでした\n自動では終了しないためアプリを閉じる場合は×で閉じてください", L"エラー", MB_ICONERROR | MB_OK);
+				::MessageBox(app->m_hWnd,
+					L"VRChatの終了待機用スレッドが起動できませんでした\n自動では終了しないためアプリを閉じる場合は×で閉じてください",
+					L"エラー",
+					MB_ICONERROR | MB_OK);
 			}
 		}
-		::Sleep(1000);
+		for (int i = 0; i < SLEEP_CYCLES; ++i) { // プロセス監視するのは1秒おきくらいでいいと思ってる
+			if (app->GetStopFlag()) break;
+			::Sleep(app->PROCESS_MONITOR_INTERVAL);
+		}
 	}
 	::_endthreadex(0);
 	return 0;
@@ -190,6 +232,7 @@ unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
 
 // ぶいちゃの終了を待つワーカースレッド
 unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
+	ydk::ComInitializer comInitializer; // com使ってないと思うけど一応保険として入れておこう
 	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
 
 	ydk::ProcessWaiter pw(app->GetVRCProcessId());
@@ -468,13 +511,6 @@ void VRCIPv6BlockerApp::VRCExecuter() {
 		::swprintf_s(szMsg, L"プロセスID(%lu)で起動しました(ランチャーの可能性もあるからこのPIDは信用できん)", pid);
 		m_Logger->Log(szMsg);
 		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatの起動待ち...");
-		// m_hWaitThread = reinterpret_cast<HANDLE>(::_beginthreadex(nullptr, 0, ProcessExitNotifyThread, this, 0, nullptr));
-		// if (m_hWaitThread == nullptr) {
-		// 	auto err = ydk::GetErrorMessage(::GetLastError());
-		// 	m_Logger->LogError(L"待機用のワーカースレッドが起動できなかった...");
-		// 	m_Logger->LogError((L"GetLastError = " + err).c_str());
-		// 	::MessageBox(m_hWnd, L"VRChatの終了待機用スレッドが起動できませんでした\n自動では終了しないためアプリを閉じる場合は×で閉じてください", L"エラー", MB_ICONERROR | MB_OK);
-		// }
 	}
 }
 void VRCIPv6BlockerApp::SetStopFlag(bool isStop)

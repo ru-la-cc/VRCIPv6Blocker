@@ -31,7 +31,7 @@ public:
 	LPCWSTR IK_VRCFILE = L"VRCFile";
 
 	virtual ~VRCIPv6BlockerApp();
-	inline ydk::IFileLogger<WCHAR>* Logger() { return m_Logger; }
+	inline constexpr ydk::IFileLogger<WCHAR>* Logger() const { return m_Logger; }
 	const std::wstring& GetCurrentFile() const { return m_currentFile; }
 
 	inline constexpr UINT GetMainDialogID() const override { return IDD_MAINDLG; }
@@ -48,6 +48,7 @@ public:
 private:
 	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
 	LPCWSTR VRCFILENAME = L"VRChat.exe";
+	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
 	std::vector<std::string> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_currentFile; // 何に使う想定だったか思い出せんけど一応残しておこう使わんなら消す

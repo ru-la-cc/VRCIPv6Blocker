@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <io.h>
 #include <memory>
+#include <wrl/client.h>
 
 #pragma comment(lib, "version.lib")
 
@@ -162,5 +163,125 @@ namespace ydk {
 			if (pV3 != nullptr) *pV3 = 0;
 			if (pV4 != nullptr) *pV4 = 0;
 		}
+	}
+
+	BOOL OpenFileName(HWND hWnd, LPWSTR lpFileName, DWORD dwLen, LPCWSTR lpTitle,
+		DWORD dwFlg, LPCWSTR lpFilter, LPCWSTR lpInitialDir, LPCWSTR lpDefExt) {
+		if (dwLen == 0 || lpFileName == nullptr) return FALSE;
+		OPENFILENAMEW ofn = {};
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = hWnd;
+		ofn.lpstrFilter = lpFilter;
+		// ofn.lpstrFilter = TEXT("CSVファイル(*.csv)\0*.csv\0テキストファイル(*.txt)\0*.txt\0すべてのファイル(*.*)\0*.*\0\0");
+		ofn.nFilterIndex = 1;							// フィルターの初期位置
+		ofn.lpstrFile = lpFileName;						// ファイル名用文字列バッファ
+		ofn.nMaxFile = dwLen;							// 文字列バッファのサイズ
+		ofn.lpstrInitialDir = lpInitialDir;
+		ofn.lpstrTitle = lpTitle;						// タイトル
+		ofn.Flags = dwFlg;
+		ofn.lpstrDefExt = lpDefExt;
+
+		if (::GetOpenFileNameW(&ofn)) {
+			lpFileName[dwLen - 1] = L'\0';
+			return TRUE;
+		}
+		return FALSE;
+	}
+
+	BOOL SaveFileName(HWND hWnd, LPWSTR lpFileName, DWORD dwLen, LPCWSTR lpTitle,
+		DWORD dwFlg, LPCWSTR lpFilter, LPCWSTR lpInitialDir, LPCWSTR lpDefExt) {
+		if (dwLen == 0 || lpFileName == nullptr) return FALSE;
+		OPENFILENAMEW ofn = {};
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = hWnd;
+		ofn.lpstrFilter = lpFilter;
+		// ofn.lpstrFilter = TEXT("CSVファイル(*.csv)\0*.csv\0テキストファイル(*.txt)\0*.txt\0すべてのファイル(*.*)\0*.*\0\0");
+		ofn.nFilterIndex = 1;							// フィルターの初期位置
+		ofn.lpstrFile = lpFileName;						// ファイル名用文字列バッファ
+		ofn.nMaxFile = dwLen;							// 文字列バッファのサイズ
+		ofn.lpstrInitialDir = lpInitialDir;
+		ofn.lpstrTitle = lpTitle;						// タイトル
+		ofn.Flags = dwFlg;
+		ofn.lpstrDefExt = lpDefExt;
+
+		if (::GetSaveFileNameW(&ofn)) {
+			lpFileName[dwLen - 1] = L'\0';
+			return TRUE;
+		}
+		return FALSE;
+	}
+
+	bool SelectFolder(HWND hWnd, LPWSTR lpDir, int nLen, LPCWSTR lpTitle, KNOWNFOLDERID initialFolder) {
+		if (lpDir == nullptr || nLen == 0) return false;
+		lpDir[0] = L'\0';
+
+		Microsoft::WRL::ComPtr<IFileOpenDialog> pfd;
+		HRESULT hr = ::CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
+		if (FAILED(hr)) return false;
+
+		DWORD opts = 0;
+		if (SUCCEEDED(pfd->GetOptions(&opts))) {
+			opts |= FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR;
+			pfd->SetOptions(opts);
+		}
+
+		if (lpTitle) pfd->SetTitle(lpTitle);
+
+		if (initialFolder != GUID_NULL) {
+			Microsoft::WRL::ComPtr<IShellItem> init;
+			if (SUCCEEDED(::SHGetKnownFolderItem(initialFolder, KF_FLAG_DEFAULT, nullptr, IID_PPV_ARGS(&init)))) {
+				pfd->SetDefaultFolder(init.Get());
+				pfd->SetFolder(init.Get()); // 必要に応じて片方でもOK
+			}
+		}
+
+		hr = pfd->Show(hWnd);
+		if (hr == HRESULT_FROM_WIN32(ERROR_CANCELLED)) return false;
+		if (FAILED(hr)) return false;
+
+		Microsoft::WRL::ComPtr<IShellItem> result;
+		hr = pfd->GetResult(&result);
+		if (FAILED(hr)) return false;
+
+		PWSTR pszPath = nullptr;
+		hr = result->GetDisplayName(SIGDN_FILESYSPATH, &pszPath);
+		if (FAILED(hr)) return false;
+
+		const size_t need = wcslen(pszPath) + 1;
+		if (need > nLen) {
+			::CoTaskMemFree(pszPath);
+			::SetLastError(ERROR_INSUFFICIENT_BUFFER); // うーん...
+			return false;
+		}
+		wmemcpy(lpDir, pszPath, need);
+		::CoTaskMemFree(pszPath);
+		return true;
+	}
+
+	bool CreateShortcut(LPCWSTR lpShortcutName, LPCWSTR lpLinkPath, LPCWSTR lpWorkDir,
+		LPCWSTR lpIconFile, int nIconIndex, LPCWSTR lpArguments,
+		LPCWSTR lpDescription, int nShow, WORD wHotkey) {
+		return true;
+	}
+
+	bool GetKnownFolderPath(std::wstring& path, KNOWNFOLDERID folderId) {
+		PWSTR pPath;
+
+		HRESULT hr = ::SHGetKnownFolderPath(
+			folderId,
+			0,
+			nullptr,
+			&pPath
+		);
+
+		if (SUCCEEDED(hr)) {
+			path = pPath;
+			::CoTaskMemFree(pPath);
+			return true;
+		}
+		if (pPath != nullptr) ::CoTaskMemFree(pPath); // ここにくる状況になるパターンがそもそもあるのか謎だが
+		path.clear();
+
+		return false;
 	}
 }
