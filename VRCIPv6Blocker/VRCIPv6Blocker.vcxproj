@@ -141,6 +141,7 @@
     <ClInclude Include="src\ILogger.h" />
     <ClInclude Include="src\ipv6conf.h" />
     <ClInclude Include="src\ISubclass.h" />
+    <ClInclude Include="src\taskman.h" />
     <ClInclude Include="src\UserProcessLauncher.h" />
     <ClInclude Include="src\ProcessWaiter.h" />
     <ClInclude Include="src\SubclassEditHandler.h" />
@@ -153,6 +154,7 @@
     <ClCompile Include="src\FileLogger.cpp" />
     <ClCompile Include="src\ipv6conf.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\taskman.cpp" />
     <ClCompile Include="src\UserProcessLauncher.cpp" />
     <ClCompile Include="src\Subclass.cpp" />
     <ClCompile Include="src\SubclassEditHandler.cpp" />
