@@ -162,6 +162,12 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
     WPARAM wParam, LPARAM lParam) {
     switch (message) {
         // ウインドウメッセージの処理をこの辺に書く予定
+	case WM_SHOWWINDOW:
+		if (wParam && m_Setting.uMinWindow == BST_CHECKED) {
+			m_Logger->Log(L"最小化します");
+			::SendMessage(m_hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+		}
+		return TRUE;
 	case WM_VRCEXIT:
 		if (wParam) {
 			m_Logger->LogError(L"VRChatが変な終わり方しました");
@@ -179,7 +185,7 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 			m_Logger->Log(L"自動終了によりアプリの終了を開始します");
 			::SendMessage(m_hWnd, WM_CLOSE, 0, 0);
 		}
-    return TRUE;
+		return TRUE;
     }
 
     return ydk::DialogAppBase::HandleMessage(hDlg, message, wParam, lParam);
@@ -386,6 +392,8 @@ void VRCIPv6BlockerApp::LoadSetting() {
 	m_Setting.strExecutePath = szPath;
 	::GetPrivateProfileStringW(APP_NAME, IK_VRCFILE, VRCFILENAME, szPath, std::size(szPath), iniPath.c_str());
 	m_Setting.strVRCFile = szPath;
+	::GetPrivateProfileStringW(APP_NAME, IK_DESTIP, L"8.8.8.8", szPath, std::size(szPath), iniPath.c_str());
+	m_Setting.strDestIp = szPath;
 	m_Logger->Log(L"設定を読込みました");
 	DumpSetting();
 }
@@ -409,6 +417,7 @@ void VRCIPv6BlockerApp::SaveSetting() {
 
 	::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), iniPath.c_str());
 	::WritePrivateProfileStringW(APP_NAME, IK_VRCFILE, m_Setting.strVRCFile.c_str(), iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_DESTIP, m_Setting.strDestIp.c_str(), iniPath.c_str());
 	m_Logger->Log(L"設定を書込みました");
 	DumpSetting();
 }
@@ -456,6 +465,12 @@ void VRCIPv6BlockerApp::DumpSetting() {
 		std::size(szLog),
 		L"DumpSetting : strVRCFile=%s",
 		m_Setting.strVRCFile.c_str());
+	m_Logger->Log(szLog);
+
+	::StringCchPrintfW(szLog,
+		std::size(szLog),
+		L"DumpSetting : strDestIp=%s",
+		m_Setting.strDestIp.c_str());
 	m_Logger->Log(szLog);
 }
 
