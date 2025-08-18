@@ -139,6 +139,7 @@
     <ClInclude Include="src\DialogBase.h" />
     <ClInclude Include="src\FileLogger.h" />
     <ClInclude Include="src\ILogger.h" />
+    <ClInclude Include="src\ipv6conf.h" />
     <ClInclude Include="src\ISubclass.h" />
     <ClInclude Include="src\UserProcessLauncher.h" />
     <ClInclude Include="src\ProcessWaiter.h" />
@@ -150,6 +151,7 @@
   <ItemGroup>
     <ClCompile Include="src\DialogBase.cpp" />
     <ClCompile Include="src\FileLogger.cpp" />
+    <ClCompile Include="src\ipv6conf.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\UserProcessLauncher.cpp" />
     <ClCompile Include="src\Subclass.cpp" />
