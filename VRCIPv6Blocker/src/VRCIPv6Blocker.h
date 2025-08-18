@@ -16,6 +16,7 @@ public:
 		UINT uNonBlocking;
 		std::wstring strExecutePath;
 		std::wstring strVRCFile;
+		std::wstring strDestIp;
 	};
 
 	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
@@ -29,6 +30,7 @@ public:
 	LPCWSTR IK_EXECUTEPATH = L"Execute";
 	LPCWSTR IK_NONBLOCKING = L"NonBlocking";
 	LPCWSTR IK_VRCFILE = L"VRCFile";
+	LPCWSTR IK_DESTIP = L"DestIp";
 
 	virtual ~VRCIPv6BlockerApp();
 	inline constexpr ydk::IFileLogger<WCHAR>* Logger() const { return m_Logger; }

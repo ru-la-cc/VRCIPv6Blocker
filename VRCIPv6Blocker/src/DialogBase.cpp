@@ -110,7 +110,6 @@ namespace ydk {
                 return -1;
             }
 
-            // PreTranslateMessageでカスタム処理
             if (PreTranslateMessage(&msg)) {
                 continue;
             }
