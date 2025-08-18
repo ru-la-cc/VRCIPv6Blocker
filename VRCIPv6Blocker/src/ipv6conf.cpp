@@ -18,6 +18,7 @@ namespace ydk {
 		return ifIndex != 0 || std::memcmp(&ifGuid, &zero, sizeof(GUID)) != 0;
 	}
 
+	// これそのうち共通化する
 	namespace {
 		template<class T>
 		class ComPtr {
