@@ -147,6 +147,7 @@
     <ClInclude Include="src\SubclassEditHandler.h" />
     <ClInclude Include="src\VRCIPv6Blocker.h" />
     <ClInclude Include="src\WinFirewall.h" />
+    <ClInclude Include="src\ydkcomptr.h" />
     <ClInclude Include="src\YDKWinUtils.h" />
   </ItemGroup>
   <ItemGroup>
