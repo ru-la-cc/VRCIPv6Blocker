@@ -56,46 +56,51 @@ namespace ydk {
 		return S_OK;
 	}
 
+	inline bool IsNotFound(HRESULT hr) noexcept {
+		return hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
+			hr == HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
+	}
+
 	// ---- 公開 API（bool 戻り / HRESULT* は任意で受け取り） -------------------------
-
-	// 1) ルール存在確認（成功= true / 失敗= false）
-	//    *pExists = true/false に実在可否を返す
-	//    *hResult = S_OK(存在) / S_FALSE(非存在) / 失敗コード
-	bool ExistsFirewallRule(const std::wstring& ruleName, bool* pExists, HRESULT* hResult) {
-		if (!pExists) { SetHr(E_POINTER, hResult); return false; }
-		*pExists = false;
-
-		if (!IsValidRuleName(ruleName)) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return false; }
-
+	// 1) ルール存在確認（存在= true / 無しまたは失敗= false）
+	//    *hResult = S_OK(存在) / S_FALSE(非存在)
+	bool ExistsFirewallRule(LPCWSTR ruleName, HRESULT* hResult) {
+		if (!ruleName) { SetHr(E_POINTER, hResult); return false; }
+		if (!IsValidRuleName(std::wstring(ruleName))) {
+			SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult);
+			return false;
+		}
 		CComPtr<INetFwRules> rules;
 		HRESULT hr = GetRules(&rules);
 		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
 
 		CComPtr<INetFwRule> rule;
-		hr = rules->Item(CComBSTR(ruleName.c_str()), &rule);
+		hr = rules->Item(CComBSTR(ruleName), &rule);
 		if (SUCCEEDED(hr) && rule) {
-			*pExists = true;
 			SetHr(S_OK, hResult);
-			return true;
+			return true; // 存在
 		}
-		if (hr == HRESULT_FROM_WIN32(ERROR_NOT_FOUND) || hr == 0x80070490L) {
-			*pExists = false;
+
+		// 見つからない（正常系の一種）
+		if (IsNotFound(hr)) {
 			SetHr(S_FALSE, hResult);
-			return true;
+			return false;  // 非存在
 		}
+
+		// それ以外の失敗
 		SetHr(hr, hResult);
-		return false;
+		return false; // 取得失敗も false
 	}
 
 	// 2) 登録（同名があれば更新）。成功= true / 失敗= false
 	//    *hResult = S_OK（追加/更新どちらも）/ 失敗コード
 	bool RegisterFirewallRule(
-			const std::wstring& ruleName,
+			LPCWSTR ruleName,
 			const std::vector<std::wstring>& remoteAddresses,
 			HRESULT* hResult,
 			LPCWSTR lpDescription
 		) {
-		if (!IsValidRuleName(ruleName)) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return false; }
+		if (!IsValidRuleName(std::wstring(ruleName))) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return false; }
 		if (remoteAddresses.empty()) { SetHr(E_INVALIDARG, hResult); return false; }
 
 		const std::wstring joined = JoinComma(remoteAddresses);
@@ -107,7 +112,7 @@ namespace ydk {
 
 		// 既存検索
 		CComPtr<INetFwRule> rule;
-		hr = rules->Item(CComBSTR(ruleName.c_str()), &rule);
+		hr = rules->Item(CComBSTR(ruleName), &rule);
 		if (SUCCEEDED(hr) && rule) {
 			// 更新
 			if (FAILED(rule->put_Direction(NET_FW_RULE_DIR_OUT)) ||
@@ -122,7 +127,7 @@ namespace ydk {
 			SetHr(S_OK, hResult);
 			return true;
 		}
-		if (hr != HRESULT_FROM_WIN32(ERROR_NOT_FOUND) && hr != 0x80070490L && FAILED(hr)) {
+		if (FAILED(hr) && !IsNotFound(hr)) {
 			SetHr(hr, hResult);
 			return false;
 		}
@@ -132,7 +137,7 @@ namespace ydk {
 		hr = rule.CoCreateInstance(__uuidof(NetFwRule));
 		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
 
-		if (FAILED(rule->put_Name(CComBSTR(ruleName.c_str()))) ||
+		if (FAILED(rule->put_Name(CComBSTR(ruleName))) ||
 			FAILED(rule->put_Description(CComBSTR(lpDescription))) ||
 			FAILED(rule->put_Direction(NET_FW_RULE_DIR_OUT)) ||
 			FAILED(rule->put_Action(NET_FW_ACTION_BLOCK)) ||
@@ -153,17 +158,17 @@ namespace ydk {
 
 	// 3) 削除。見つからなくても呼び出し成功なら true、*hResult=S_FALSE で区別
 	//    *hResult = S_OK(削除済) / S_FALSE(見つからず未削除) / 失敗コード
-	bool RemoveFirewallRule(const std::wstring& ruleName, HRESULT* hResult) {
-		if (!IsValidRuleName(ruleName)) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return false; }
+	bool RemoveFirewallRule(LPCWSTR ruleName, HRESULT* hResult) {
+		if (!IsValidRuleName(std::wstring(ruleName))) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return false; }
 
 		CComPtr<INetFwRules> rules;
 		HRESULT hr = GetRules(&rules);
 		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
 
-		hr = rules->Remove(CComBSTR(ruleName.c_str()));
+		hr = rules->Remove(CComBSTR(ruleName));
 		if (SUCCEEDED(hr)) { SetHr(S_OK, hResult); return true; }
 
-		if (hr == HRESULT_FROM_WIN32(ERROR_NOT_FOUND) || hr == 0x80070490L) {
+		if (hr == HRESULT_FROM_WIN32(ERROR_NOT_FOUND)) {
 			SetHr(S_FALSE, hResult); // 非存在は “機能的成功（No-Op）”
 			return true;
 		}

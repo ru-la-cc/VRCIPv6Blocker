@@ -6,6 +6,9 @@
 #include <vector>
 #include "../resource.h"
 
+#define APP_GUID L"{31952356-61C8-42F9-9D19-AC73E9AF5ED5}"
+#define APP_NAME L"VRCIPv6Blocker"
+
 class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
 	struct INI_SETTING {
@@ -21,7 +24,7 @@ public:
 
 	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
 
-	static constexpr LPCWSTR APP_NAME = L"VRCIPv6Blocker";
+	static constexpr LPCWSTR REGISTER_NAME = APP_GUID L"_" APP_NAME;
 	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
 	LPCWSTR IK_RUNVRC = L"RunVRC";
 	LPCWSTR IK_AUTOSHUTDOWN = L"AutoShutdown";
@@ -51,7 +54,7 @@ private:
 	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
 	LPCWSTR VRCFILENAME = L"VRChat.exe";
 	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
-	std::vector<std::string> m_BlockList;
+	std::vector<std::wstring> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_currentFile; // 何に使う想定だったか思い出せんけど一応残しておこう使わんなら消す
 	ydk::IFileLogger<WCHAR>* m_Logger;
@@ -67,6 +70,8 @@ private:
 	bool m_isStop = false;
 	HANDLE m_hMonThread = nullptr;
 	HANDLE m_hWaitThread = nullptr;
+	bool m_isFirewallBlocked = false;
+	bool m_isIPv6Enabled = true;
 
 	// 設定関連
 	INI_SETTING m_Setting;
@@ -88,4 +93,8 @@ private:
 	bool GetStopFlag();
 	void SetVRCProcessId(DWORD dwProcessId);
 	DWORD GetVRCProcessId();
+	bool IsFirewallRegistered();
+	void SetFirewall();
+	void RemoveFirewall();
+	void SetIPv6();
 };
