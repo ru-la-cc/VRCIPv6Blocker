@@ -1,4 +1,8 @@
-﻿#include "VRCIPv6Blocker.h"
+﻿// winapiはincludeの順序気にしないといけないの大杉なんだよ...
+#include "ipv6conf.h"
+#include "WinFirewall.h"
+#include "taskman.h"
+#include "VRCIPv6Blocker.h"
 #include "YDKWinUtils.h"
 #include "SubClassEditHandler.h"
 #include "ProcessWaiter.h"
@@ -47,6 +51,8 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 
 	LoadBlockList();
 	LoadSetting();
+
+	m_isFirewallBlocked = IsFirewallRegistered();
 	SetSetting();
 
 	SetVRCProcessId(GetVRChatProcess());
@@ -108,6 +114,24 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 		}
 		else {
 			VRCExecuter();
+		}
+		return TRUE;
+
+	case IDC_BUTTON_FIREWALL:
+		if (m_isFirewallBlocked) {
+			RemoveFirewall();
+			if (m_isFirewallBlocked) {
+				::MessageBoxW(m_hWnd, L"ルールは削除されませんでした", L"警告", MB_ICONWARNING | MB_OK);
+			} else {
+				::MessageBoxW(m_hWnd, L"ルールを削除しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			}
+		} else {
+			SetFirewall();
+			if (m_isFirewallBlocked) {
+				::MessageBoxW(m_hWnd, L"ルールを登録しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			} else {
+				::MessageBoxW(m_hWnd, L"ルールが登録できませんでした", L"エラー", MB_ICONERROR | MB_OK);
+			}
 		}
 		return TRUE;
 
@@ -358,7 +382,11 @@ void VRCIPv6BlockerApp::LoadBlockList() {
 			break;
 		}
 		*(pt + 1) = '\0';
-		if(*ps) m_BlockList.push_back(ps);
+		if (*ps) {
+			WCHAR szRule[256];
+			ydk::ToUtf16(ps, szRule, std::size(szRule));
+			m_BlockList.push_back(szRule);
+		}
 	}
 	if (std::ferror(pf)) {
 		m_Logger->LogError(L"ブロックリストの読込中にエラーが発生しました");
@@ -370,9 +398,9 @@ void VRCIPv6BlockerApp::LoadBlockList() {
 		m_Logger->Log(szLog);
 	}
 
-	//for (std::vector<std::string>::iterator it = m_BlockList.begin(); it != m_BlockList.end(); ++it) {
-	//	::MessageBoxA(m_hWnd, it->c_str(), "vector", MB_OK);
-	//}
+	// for (std::vector<std::wstring>::iterator it = m_BlockList.begin(); it != m_BlockList.end(); ++it) {
+	// 	m_Logger->Log(it->c_str());
+	// }
 
 	std::fclose(pf);
 }
@@ -481,6 +509,12 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	else {
 		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_RUNVRC), TRUE);
 	}
+	if (m_isFirewallBlocked) {
+		::SetDlgItemText(m_hWnd, IDC_BUTTON_FIREWALL, L"FWブロック解除");
+	}
+	else {
+		::SetDlgItemText(m_hWnd, IDC_BUTTON_FIREWALL, L"FWブロック登録");
+	}
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), m_Setting.uFirewallBlock == BST_CHECKED);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), m_Setting.uFirewallBlock != BST_CHECKED);
 }
@@ -554,4 +588,64 @@ DWORD VRCIPv6BlockerApp::GetVRCProcessId() {
 	DWORD result = m_vrcProcessId;
 	::LeaveCriticalSection(&m_tCs);
 	return result;
+}
+
+bool VRCIPv6BlockerApp::IsFirewallRegistered() {
+	HRESULT hr;
+	if (ydk::ExistsFirewallRule(REGISTER_NAME, &hr)) {
+		m_Logger->LogWarning(L"同一のルール名あり！登録する場合ルールは上書きされます");
+		return true;
+	}
+	else if (FAILED(hr)) {
+		m_Logger->LogError(L"ルールのチェックに失敗");
+		WCHAR szErr[256];
+		::swprintf_s(szErr, std::size(szErr), L"hr = %u", hr);
+		m_Logger->LogError(szErr);
+	}
+	return false;
+}
+
+void VRCIPv6BlockerApp::SetFirewall() {
+	if (m_BlockList.size() == 0) {
+		m_Logger->LogError(L"有効なルールが存在しないため設定は行いません");
+		return;
+	}
+
+	m_isFirewallBlocked = IsFirewallRegistered();
+
+	if(!ydk::RegisterFirewallRule(REGISTER_NAME, m_BlockList, nullptr, L"VRChat IPv6 Block Rule")){
+		m_Logger->LogError(L"ルールの登録に失敗");
+	} else {
+		m_Logger->Log(L"Firewallに設定を登録しました");
+		m_isFirewallBlocked = true;
+	}
+	GetSetting();
+	CheckDialogControl();
+}
+
+void VRCIPv6BlockerApp::RemoveFirewall() {
+	HRESULT hr;
+	if (ydk::RemoveFirewallRule(REGISTER_NAME, &hr)) {
+		if (hr == S_OK) {
+			m_Logger->Log(L"対象のルールを削除しました");
+			m_isFirewallBlocked = false;
+		}
+		else if (hr == S_FALSE) {
+			m_Logger->LogWarning(L"対象のルールがありません");
+			m_isFirewallBlocked = false;
+		}
+		else {
+			m_Logger->LogWarning(L"ここは来ないはずだが...");
+		}
+	}
+	else {
+		DWORD err = ::GetLastError();
+		m_Logger->LogError(L"ルールの削除に失敗");
+	}
+	GetSetting();
+	CheckDialogControl();
+}
+
+void VRCIPv6BlockerApp::SetIPv6() {
+
 }
