@@ -310,6 +310,9 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
     : ydk::DialogAppBase() {
     // コンストラクタ
     m_ModulePath = ydk::GetModuleDir();
+	m_IniFile = m_ModulePath;
+	m_IniFile += APP_NAME;
+	m_IniFile += L".ini";
 	static auto logger = ydk::FileLogger((m_ModulePath + logFileName).c_str());
     m_Logger = &logger;
 	m_Logger->Log(L"アプリを起動します");
@@ -407,45 +410,45 @@ void VRCIPv6BlockerApp::LoadBlockList() {
 
 // 設定情報の読込
 void VRCIPv6BlockerApp::LoadSetting() {
-	std::wstring iniPath(m_ModulePath);
-	iniPath += APP_NAME;
-	iniPath += L".ini";
-	m_Setting.uRunVRC = ::GetPrivateProfileIntW(APP_NAME, IK_RUNVRC, BST_CHECKED, iniPath.c_str());
-	m_Setting.uAutoShutdown = ::GetPrivateProfileIntW(APP_NAME, IK_AUTOSHUTDOWN, BST_CHECKED, iniPath.c_str());
-	m_Setting.uMinWindow = ::GetPrivateProfileIntW(APP_NAME, IK_MINWINDOW, BST_UNCHECKED, iniPath.c_str());
-	m_Setting.uFirewallBlock = ::GetPrivateProfileIntW(APP_NAME, IK_FIREWALLBLOCK, BST_CHECKED, iniPath.c_str());
-	m_Setting.uNonBlocking = ::GetPrivateProfileIntW(APP_NAME, IK_NONBLOCKING, BST_UNCHECKED, iniPath.c_str());
-	WCHAR szPath[MAX_PATH];
-	::GetPrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, L"", szPath, std::size(szPath), iniPath.c_str());
-	m_Setting.strExecutePath = szPath;
-	::GetPrivateProfileStringW(APP_NAME, IK_VRCFILE, VRCFILENAME, szPath, std::size(szPath), iniPath.c_str());
-	m_Setting.strVRCFile = szPath;
-	::GetPrivateProfileStringW(APP_NAME, IK_DESTIP, L"8.8.8.8", szPath, std::size(szPath), iniPath.c_str());
-	m_Setting.strDestIp = szPath;
+	m_Setting.uRunVRC = ::GetPrivateProfileIntW(APP_NAME, IK_RUNVRC, BST_CHECKED, m_IniFile.c_str());
+	m_Setting.uAutoShutdown = ::GetPrivateProfileIntW(APP_NAME, IK_AUTOSHUTDOWN, BST_CHECKED, m_IniFile.c_str());
+	m_Setting.uMinWindow = ::GetPrivateProfileIntW(APP_NAME, IK_MINWINDOW, BST_UNCHECKED, m_IniFile.c_str());
+	m_Setting.uFirewallBlock = ::GetPrivateProfileIntW(APP_NAME, IK_FIREWALLBLOCK, BST_CHECKED, m_IniFile.c_str());
+	m_Setting.uNonBlocking = ::GetPrivateProfileIntW(APP_NAME, IK_NONBLOCKING, BST_UNCHECKED, m_IniFile.c_str());
+	m_Setting.uRevert = ::GetPrivateProfileIntW(APP_NAME, IK_REVERT, BST_UNCHECKED, m_IniFile.c_str());
+	WCHAR szBuf[MAX_PATH];
+	::GetPrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, L"", szBuf, std::size(szBuf), m_IniFile.c_str());
+	m_Setting.strExecutePath = szBuf;
+	::GetPrivateProfileStringW(APP_NAME, IK_VRCFILE, VRCFILENAME, szBuf, std::size(szBuf), m_IniFile.c_str());
+	m_Setting.strVRCFile = szBuf;
+	::GetPrivateProfileStringW(APP_NAME, IK_DESTIP, L"8.8.8.8", szBuf, std::size(szBuf), m_IniFile.c_str());
+	m_Setting.strDestIp = szBuf;
+	::GetPrivateProfileStringW(APP_NAME, IK_NIC, L"", szBuf, std::size(szBuf), m_IniFile.c_str());
+	m_Setting.strNIC = szBuf;
 	m_Logger->Log(L"設定を読込みました");
 	DumpSetting();
 }
 
 // 設定情報の書込
 void VRCIPv6BlockerApp::SaveSetting() {
-	std::wstring iniPath(m_ModulePath);
-	iniPath += APP_NAME;
-	iniPath += L".ini";
 	WCHAR szFormat[64];
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uRunVRC);
-	::WritePrivateProfileStringW(APP_NAME, IK_RUNVRC, szFormat, iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_RUNVRC, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uAutoShutdown);
-	::WritePrivateProfileStringW(APP_NAME, IK_AUTOSHUTDOWN, szFormat, iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_AUTOSHUTDOWN, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uMinWindow);
-	::WritePrivateProfileStringW(APP_NAME, IK_MINWINDOW, szFormat, iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_MINWINDOW, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uFirewallBlock);
-	::WritePrivateProfileStringW(APP_NAME, IK_FIREWALLBLOCK, szFormat, iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_FIREWALLBLOCK, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uNonBlocking);
-	::WritePrivateProfileStringW(APP_NAME, IK_NONBLOCKING, szFormat, iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_NONBLOCKING, szFormat, m_IniFile.c_str());
+	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uRevert);
+	::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szFormat, m_IniFile.c_str());
 
-	::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), iniPath.c_str());
-	::WritePrivateProfileStringW(APP_NAME, IK_VRCFILE, m_Setting.strVRCFile.c_str(), iniPath.c_str());
-	::WritePrivateProfileStringW(APP_NAME, IK_DESTIP, m_Setting.strDestIp.c_str(), iniPath.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), m_IniFile.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_VRCFILE, m_Setting.strVRCFile.c_str(), m_IniFile.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_DESTIP, m_Setting.strDestIp.c_str(), m_IniFile.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_NIC, m_Setting.strNIC.c_str(), m_IniFile.c_str());
 	m_Logger->Log(L"設定を書込みました");
 	DumpSetting();
 }
@@ -455,9 +458,9 @@ void VRCIPv6BlockerApp::GetSetting() {
 	m_Setting.uAutoShutdown = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_AUTOEXIT);
 	m_Setting.uMinWindow = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_MINWINDOW);
 	m_Setting.uFirewallBlock = ::IsDlgButtonChecked(m_hWnd, IDC_CHECK_FIREWALL);
-	WCHAR szPath[MAX_PATH];
-	::GetDlgItemTextW(m_hWnd, IDC_EDIT_LINK, szPath, std::size(szPath));
-	m_Setting.strExecutePath = szPath;
+	WCHAR szBuf[MAX_PATH];
+	::GetDlgItemTextW(m_hWnd, IDC_EDIT_LINK, szBuf, std::size(szBuf));
+	m_Setting.strExecutePath = szBuf;
 }
 
 void VRCIPv6BlockerApp::SetSetting() {
@@ -474,13 +477,13 @@ void VRCIPv6BlockerApp::DumpSetting() {
 	WCHAR szLog[384];
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
-		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u)",
+		L"DumpSetting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u), uRevert(%u)",
 		m_Setting.uRunVRC,
 		m_Setting.uAutoShutdown,
 		m_Setting.uMinWindow,
 		m_Setting.uFirewallBlock,
 		m_Setting.uNonBlocking,
-		m_Setting.strExecutePath.c_str());
+		m_Setting.uRevert);
 	m_Logger->Log(szLog);
 
 	::StringCchPrintfW(szLog,
@@ -499,6 +502,12 @@ void VRCIPv6BlockerApp::DumpSetting() {
 		std::size(szLog),
 		L"DumpSetting : strDestIp=%s",
 		m_Setting.strDestIp.c_str());
+	m_Logger->Log(szLog);
+
+	::StringCchPrintfW(szLog,
+		std::size(szLog),
+		L"DumpSetting : strNIC=%s",
+		m_Setting.strNIC.c_str());
 	m_Logger->Log(szLog);
 }
 
@@ -646,6 +655,26 @@ void VRCIPv6BlockerApp::RemoveFirewall() {
 	CheckDialogControl();
 }
 
-void VRCIPv6BlockerApp::SetIPv6() {
+void VRCIPv6BlockerApp::SetIPv6(bool isEnable) {
 
+}
+
+std::wstring VRCIPv6BlockerApp::SerializeGuid(const GUID& guid) {
+	wchar_t buf[64] = {};
+	int len = StringFromGUID2(guid, buf, _countof(buf));
+	return (len > 0) ? std::wstring(buf) : L"";
+}
+
+bool VRCIPv6BlockerApp::DeserializeGuid(LPCWSTR lpStr, GUID& guid) {
+	HRESULT hr = CLSIDFromString(lpStr, &guid);
+	return SUCCEEDED(hr);
+}
+
+void VRCIPv6BlockerApp::WriteGuid(LPCWSTR lpGuid) {
+	m_Setting.strNIC = lpGuid;
+	m_Setting.uRevert = (lpGuid == nullptr || *lpGuid) ? BST_UNCHECKED : BST_CHECKED;
+	WCHAR szChk[32];
+	::swprintf_s(szChk, L"%u", m_Setting.uRevert);
+	::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szChk, m_IniFile.c_str());
+	::WritePrivateProfileStringW(APP_NAME, IK_NIC, lpGuid, m_IniFile.c_str());
 }

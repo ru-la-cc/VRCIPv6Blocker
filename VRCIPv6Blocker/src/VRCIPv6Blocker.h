@@ -17,9 +17,11 @@ public:
 		UINT uMinWindow;
 		UINT uFirewallBlock;
 		UINT uNonBlocking;
+		UINT uRevert;
 		std::wstring strExecutePath;
 		std::wstring strVRCFile;
 		std::wstring strDestIp;
+		std::wstring strNIC;
 	};
 
 	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
@@ -32,8 +34,10 @@ public:
 	LPCWSTR IK_FIREWALLBLOCK = L"FirewallBlock";
 	LPCWSTR IK_EXECUTEPATH = L"Execute";
 	LPCWSTR IK_NONBLOCKING = L"NonBlocking";
+	LPCWSTR IK_REVERT = L"Revert";
 	LPCWSTR IK_VRCFILE = L"VRCFile";
 	LPCWSTR IK_DESTIP = L"DestIp";
+	LPCWSTR IK_NIC = L"NIC";
 
 	virtual ~VRCIPv6BlockerApp();
 	inline constexpr ydk::IFileLogger<WCHAR>* Logger() const { return m_Logger; }
@@ -56,6 +60,7 @@ private:
 	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
 	std::vector<std::wstring> m_BlockList;
 	std::wstring m_ModulePath;
+	std::wstring m_IniFile;
 	std::wstring m_currentFile; // 何に使う想定だったか思い出せんけど一応残しておこう使わんなら消す
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	ydk::ComInitializer m_comInitializer;
@@ -96,5 +101,9 @@ private:
 	bool IsFirewallRegistered();
 	void SetFirewall();
 	void RemoveFirewall();
-	void SetIPv6();
+	void SetIPv6(bool isEnable);
+	std::wstring SerializeGuid(const GUID& guid);
+	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid);
+	void ReadGuid(LPWSTR lpGuid, int len);
+	void WriteGuid(LPCWSTR lpGuid);
 };
