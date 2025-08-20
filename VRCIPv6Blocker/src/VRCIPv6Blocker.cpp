@@ -52,6 +52,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	LoadBlockList();
 	LoadSetting();
 
+	CheckIPv6Setting();
 	m_isFirewallBlocked = IsFirewallRegistered();
 	SetSetting();
 
@@ -132,6 +133,20 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 			} else {
 				::MessageBoxW(m_hWnd, L"ルールが登録できませんでした", L"エラー", MB_ICONERROR | MB_OK);
 			}
+		}
+		return TRUE;
+
+	case IDC_BUTTON_IPV6:
+		if (SetIPv6(!m_isIPv6Enabled)) {
+			if (m_isIPv6Enabled) {
+				::MessageBoxW(m_hWnd, L"IPv6を有効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			}
+			else {
+				::MessageBoxW(m_hWnd, L"IPv6を無効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			}
+		}
+		else {
+			::MessageBoxW(m_hWnd, L"IPv6の設定変更ができませんでした", L"エラー", MB_ICONERROR | MB_OK);
 		}
 		return TRUE;
 
@@ -524,6 +539,12 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	else {
 		::SetDlgItemText(m_hWnd, IDC_BUTTON_FIREWALL, L"FWブロック登録");
 	}
+	if (m_isIPv6Enabled) {
+		::SetDlgItemText(m_hWnd, IDC_BUTTON_IPV6, L"IPv6無効化");
+	}
+	else {
+		::SetDlgItemText(m_hWnd, IDC_BUTTON_IPV6, L"IPv6有効化");
+	}
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), m_Setting.uFirewallBlock == BST_CHECKED);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), m_Setting.uFirewallBlock != BST_CHECKED);
 }
@@ -655,8 +676,21 @@ void VRCIPv6BlockerApp::RemoveFirewall() {
 	CheckDialogControl();
 }
 
-void VRCIPv6BlockerApp::SetIPv6(bool isEnable) {
-
+bool VRCIPv6BlockerApp::SetIPv6(bool isEnable) {
+	HRESULT hr = ydk::SetIPv6Enable(isEnable, &m_adapterKey, m_Setting.strDestIp.c_str());
+	if (hr == S_OK) {
+		m_Logger->Log((std::wstring(L"IPv6を") + (isEnable ? L"有効化しました" : L"無効化しました")).c_str());
+		m_isIPv6Enabled = isEnable;
+	}
+	else if (hr == S_FALSE) {
+		m_Logger->LogWarning(L"対象のネットワークアダプタが見つかりませんでした");
+	}
+	else {
+		m_Logger->LogError(L"ネットワークアダプタの設定に失敗しました");
+	}
+	GetSetting();
+	CheckDialogControl();
+	return hr == S_OK;
 }
 
 std::wstring VRCIPv6BlockerApp::SerializeGuid(const GUID& guid) {
@@ -672,9 +706,34 @@ bool VRCIPv6BlockerApp::DeserializeGuid(LPCWSTR lpStr, GUID& guid) {
 
 void VRCIPv6BlockerApp::WriteGuid(LPCWSTR lpGuid) {
 	m_Setting.strNIC = lpGuid;
-	m_Setting.uRevert = (lpGuid == nullptr || *lpGuid) ? BST_UNCHECKED : BST_CHECKED;
+	m_Setting.uRevert = lpGuid == nullptr ? BST_UNCHECKED : BST_CHECKED;
 	WCHAR szChk[32];
 	::swprintf_s(szChk, L"%u", m_Setting.uRevert);
 	::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szChk, m_IniFile.c_str());
 	::WritePrivateProfileStringW(APP_NAME, IK_NIC, lpGuid, m_IniFile.c_str());
+}
+
+void VRCIPv6BlockerApp::CheckIPv6Setting() {
+	HRESULT hr = ydk::ResolveInternetAdapterFromString(m_Setting.strDestIp.c_str(), m_adapterKey);
+	if (SUCCEEDED(hr)) {
+		m_Logger->Log(L"ネットワークアダプタを特定しました");
+		if (ydk::IsIPv6Enable(m_adapterKey, &hr)) {
+			m_Setting.uRevert = BST_CHECKED;
+			m_isIPv6Enabled = true;
+		}
+		else {
+			if (FAILED(hr)) {
+				m_Logger->LogError(L"IPv6の設定状況の取得に失敗しました");
+				::MessageBoxW(m_hWnd, L"IPv6の設定状況の取得に失敗しました", L"エラー", MB_ICONERROR | MB_OK);
+			} else {
+				m_isIPv6Enabled = false;
+			}
+			m_Setting.uRevert = BST_UNCHECKED;
+		}
+		WriteGuid(SerializeGuid(m_adapterKey.ifGuid).c_str());
+	}
+	else {
+		m_Logger->LogError(L"ネットワークアダプタの情報を取得できませんでした");
+		::MessageBoxW(m_hWnd, L"ネットワークアダプタを取得できません", L"エラー", MB_ICONERROR | MB_OK);
+	}
 }
