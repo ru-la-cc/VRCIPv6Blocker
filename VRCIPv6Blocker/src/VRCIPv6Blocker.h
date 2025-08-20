@@ -42,7 +42,6 @@ public:
 
 	virtual ~VRCIPv6BlockerApp();
 	inline constexpr ydk::IFileLogger<WCHAR>* Logger() const { return m_Logger; }
-	const std::wstring& GetCurrentFile() const { return m_currentFile; }
 
 	inline constexpr UINT GetMainDialogID() const override { return IDD_MAINDLG; }
 	bool OnInitialize() override;
@@ -62,7 +61,6 @@ private:
 	std::vector<std::wstring> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_IniFile;
-	std::wstring m_currentFile; // 何に使う想定だったか思い出せんけど一応残しておこう使わんなら消す
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	ydk::ComInitializer m_comInitializer;
 	int m_argc;
