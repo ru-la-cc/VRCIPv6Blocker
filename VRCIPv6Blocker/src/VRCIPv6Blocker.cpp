@@ -45,8 +45,8 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
 	WORD v1, v2, v3, v4;
 	ydk::GetAppVersion(&v1, &v2, &v3, &v4);
-	WCHAR szVer[32];
-	::swprintf_s(szVer, L"%u.%u.%u(%u)", v1, v2, v3, v4);
+	WCHAR szVer[64];
+	::swprintf_s(szVer, L"Ver. %u.%u.%u(%u)", v1, v2, v3, v4);
 	::SetDlgItemTextW(m_hWnd, IDC_STATIC_VERSION, szVer);
 
 	LoadBlockList();

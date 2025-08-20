@@ -2,6 +2,7 @@
 #include "UserProcessLauncher.h"
 #include <iterator>
 
+// てかこれ管理者権限で実行するからD&D受け付けんのか...
 LRESULT SubclassEditHandler::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_DROPFILES:
