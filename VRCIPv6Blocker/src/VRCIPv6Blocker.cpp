@@ -119,35 +119,11 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 		return TRUE;
 
 	case IDC_BUTTON_FIREWALL:
-		if (m_isFirewallBlocked) {
-			RemoveFirewall();
-			if (m_isFirewallBlocked) {
-				::MessageBoxW(m_hWnd, L"ルールは削除されませんでした", L"警告", MB_ICONWARNING | MB_OK);
-			} else {
-				::MessageBoxW(m_hWnd, L"ルールを削除しました", L"通知", MB_ICONINFORMATION | MB_OK);
-			}
-		} else {
-			SetFirewall();
-			if (m_isFirewallBlocked) {
-				::MessageBoxW(m_hWnd, L"ルールを登録しました", L"通知", MB_ICONINFORMATION | MB_OK);
-			} else {
-				::MessageBoxW(m_hWnd, L"ルールが登録できませんでした", L"エラー", MB_ICONERROR | MB_OK);
-			}
-		}
+		ChangeFireWall();
 		return TRUE;
 
 	case IDC_BUTTON_IPV6:
-		if (SetIPv6(!m_isIPv6Enabled)) {
-			if (m_isIPv6Enabled) {
-				::MessageBoxW(m_hWnd, L"IPv6を有効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
-			}
-			else {
-				::MessageBoxW(m_hWnd, L"IPv6を無効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
-			}
-		}
-		else {
-			::MessageBoxW(m_hWnd, L"IPv6の設定変更ができませんでした", L"エラー", MB_ICONERROR | MB_OK);
-		}
+		ChangeIPv6();
 		return TRUE;
 
 	case IDC_BUTTON_REF:
@@ -737,3 +713,39 @@ void VRCIPv6BlockerApp::CheckIPv6Setting() {
 		::MessageBoxW(m_hWnd, L"ネットワークアダプタを取得できません", L"エラー", MB_ICONERROR | MB_OK);
 	}
 }
+
+void VRCIPv6BlockerApp::ChangeFireWall() {
+	if (m_isFirewallBlocked) {
+		RemoveFirewall();
+		if (m_isFirewallBlocked) {
+			::MessageBoxW(m_hWnd, L"ルールは削除されませんでした", L"警告", MB_ICONWARNING | MB_OK);
+		}
+		else {
+			::MessageBoxW(m_hWnd, L"ルールを削除しました", L"通知", MB_ICONINFORMATION | MB_OK);
+		}
+	}
+	else {
+		SetFirewall();
+		if (m_isFirewallBlocked) {
+			::MessageBoxW(m_hWnd, L"ルールを登録しました", L"通知", MB_ICONINFORMATION | MB_OK);
+		}
+		else {
+			::MessageBoxW(m_hWnd, L"ルールが登録できませんでした", L"エラー", MB_ICONERROR | MB_OK);
+		}
+	}
+}
+
+void VRCIPv6BlockerApp::ChangeIPv6() {
+	if (SetIPv6(!m_isIPv6Enabled)) {
+		if (m_isIPv6Enabled) {
+			::MessageBoxW(m_hWnd, L"IPv6を有効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+		}
+		else {
+			::MessageBoxW(m_hWnd, L"IPv6を無効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+		}
+	}
+	else {
+		::MessageBoxW(m_hWnd, L"IPv6の設定変更ができませんでした", L"エラー", MB_ICONERROR | MB_OK);
+	}
+}
+
