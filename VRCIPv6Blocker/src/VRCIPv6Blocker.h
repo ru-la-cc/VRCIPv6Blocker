@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "ipv6conf.h"
 #include "DialogBase.h"
 #include "FileLogger.h"
 #include "ISubclass.h"
@@ -77,9 +78,10 @@ private:
 	HANDLE m_hWaitThread = nullptr;
 	bool m_isFirewallBlocked = false;
 	bool m_isIPv6Enabled = true;
+	ydk::AdapterKey m_adapterKey = {};
 
 	// 設定関連
-	INI_SETTING m_Setting;
+	INI_SETTING m_Setting = {};
 
 	static unsigned __stdcall VRCMonitoringThread(void* param);
 	static unsigned __stdcall ProcessExitNotifyThread(void* param);
@@ -101,9 +103,9 @@ private:
 	bool IsFirewallRegistered();
 	void SetFirewall();
 	void RemoveFirewall();
-	void SetIPv6(bool isEnable);
+	bool SetIPv6(bool isEnable);
 	std::wstring SerializeGuid(const GUID& guid);
 	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid);
-	void ReadGuid(LPWSTR lpGuid, int len);
 	void WriteGuid(LPCWSTR lpGuid);
+	void CheckIPv6Setting();
 };
