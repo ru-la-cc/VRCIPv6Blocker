@@ -29,7 +29,6 @@ VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
 
 bool VRCIPv6BlockerApp::OnInitialize() {
 	// アプリケーション初期化(コンストラクタとOnInitDialogの間の中途半端な立ち位置)
-
 	return true;
 }
 
@@ -87,6 +86,9 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 			L"エラー",
 			MB_ICONERROR | MB_OK);
 	}
+
+	// 自動実行の場合は
+	if(m_isAutoRun) AutoStart();
     return TRUE;
 }
 
@@ -196,7 +198,8 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 			::CloseHandle(m_hWaitThread);
 			m_hWaitThread = nullptr;
 		}
-		if (m_Setting.uAutoShutdown == BST_CHECKED) {
+		if (m_isAutoRun && m_Setting.uAutoShutdown == BST_CHECKED) {
+			AutoExit();
 			m_Logger->Log(L"自動終了によりアプリの終了を開始します");
 			::SendMessage(m_hWnd, WM_CLOSE, 0, 0);
 		}
@@ -395,7 +398,6 @@ void VRCIPv6BlockerApp::LoadBlockList() {
 	// for (std::vector<std::wstring>::iterator it = m_BlockList.begin(); it != m_BlockList.end(); ++it) {
 	// 	m_Logger->Log(it->c_str());
 	// }
-
 	std::fclose(pf);
 }
 
@@ -503,7 +505,7 @@ void VRCIPv6BlockerApp::DumpSetting() {
 }
 
 void VRCIPv6BlockerApp::CheckDialogControl() {
-	if (m_Setting.uRunVRC == BST_CHECKED && m_Setting.strExecutePath.length() > 0) {
+	if (m_isAutoRun || (m_Setting.uRunVRC == BST_CHECKED && m_Setting.strExecutePath.length() > 0)) {
 		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_RUNVRC), FALSE);
 	}
 	else {
@@ -521,8 +523,12 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	else {
 		::SetDlgItemText(m_hWnd, IDC_BUTTON_IPV6, L"IPv6有効化");
 	}
-	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), m_Setting.uFirewallBlock == BST_CHECKED);
-	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), m_Setting.uFirewallBlock != BST_CHECKED);
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), !m_isAutoRun && m_Setting.uFirewallBlock == BST_CHECKED);
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), !m_isAutoRun && m_Setting.uFirewallBlock != BST_CHECKED);
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_REF), !m_isAutoRun);
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun);
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_MAKELINK), !m_isAutoRun);
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_SAVE), !m_isAutoRun);
 }
 
 DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
@@ -720,14 +726,14 @@ void VRCIPv6BlockerApp::ChangeFireWall() {
 		if (m_isFirewallBlocked) {
 			::MessageBoxW(m_hWnd, L"ルールは削除されませんでした", L"警告", MB_ICONWARNING | MB_OK);
 		}
-		else {
+		else if(!m_isAutoRun) {
 			::MessageBoxW(m_hWnd, L"ルールを削除しました", L"通知", MB_ICONINFORMATION | MB_OK);
 		}
 	}
 	else {
 		SetFirewall();
 		if (m_isFirewallBlocked) {
-			::MessageBoxW(m_hWnd, L"ルールを登録しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			if(!m_isAutoRun) ::MessageBoxW(m_hWnd, L"ルールを登録しました", L"通知", MB_ICONINFORMATION | MB_OK);
 		}
 		else {
 			::MessageBoxW(m_hWnd, L"ルールが登録できませんでした", L"エラー", MB_ICONERROR | MB_OK);
@@ -738,10 +744,10 @@ void VRCIPv6BlockerApp::ChangeFireWall() {
 void VRCIPv6BlockerApp::ChangeIPv6() {
 	if (SetIPv6(!m_isIPv6Enabled)) {
 		if (m_isIPv6Enabled) {
-			::MessageBoxW(m_hWnd, L"IPv6を有効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			if (!m_isAutoRun) ::MessageBoxW(m_hWnd, L"IPv6を有効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
 		}
 		else {
-			::MessageBoxW(m_hWnd, L"IPv6を無効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			if (!m_isAutoRun) ::MessageBoxW(m_hWnd, L"IPv6を無効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
 		}
 	}
 	else {
@@ -749,3 +755,52 @@ void VRCIPv6BlockerApp::ChangeIPv6() {
 	}
 }
 
+void VRCIPv6BlockerApp::AutoStart() {
+	if (m_Setting.uFirewallBlock == BST_CHECKED) {
+		// ファイアウォールにブロックを追加する場合
+		if (!m_isFirewallBlocked) {
+			ChangeFireWall();
+		}
+		else {
+			m_Logger->LogWarning(L"ファイアウォール登録済みのためスキップします");
+		}
+	}
+	else {
+		// IPv6無効化の場合
+		if (m_isIPv6Enabled) {
+			ChangeIPv6();
+		}
+		else {
+			m_Logger->LogWarning(L"IPv6は無効のためスキップします");
+		}
+	}
+
+	// まぁVRChatは起動しますけどね
+	if (GetVRCProcessId()) {
+		m_Logger->LogWarning(L"VRChatはすでに起動中です");
+	}
+	else {
+		VRCExecuter();
+	}
+}
+
+void VRCIPv6BlockerApp::AutoExit() {
+	if (m_Setting.uFirewallBlock == BST_CHECKED) {
+		// ファイアウォールのブロックを解除する場合
+		if (m_isFirewallBlocked) {
+			ChangeFireWall();
+		}
+		else {
+			m_Logger->LogWarning(L"ファイアウォールに登録されていません");
+		}
+	}
+	else {
+		// IPv6有効化の場合
+		if (!m_isIPv6Enabled && m_Setting.uRevert == BST_CHECKED) {
+			ChangeIPv6();
+		}
+		else {
+			m_Logger->LogWarning(L"IPv6は有効のためスキップします");
+		}
+	}
+}

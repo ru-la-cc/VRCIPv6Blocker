@@ -108,4 +108,7 @@ private:
 	void CheckIPv6Setting();
 	void ChangeFireWall();
 	void ChangeIPv6();
+	void AutoStart();
+	void AutoExit();
+
 };
