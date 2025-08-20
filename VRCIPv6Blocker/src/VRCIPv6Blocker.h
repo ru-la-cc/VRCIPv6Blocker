@@ -108,4 +108,6 @@ private:
 	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid);
 	void WriteGuid(LPCWSTR lpGuid);
 	void CheckIPv6Setting();
+	void ChangeFireWall();
+	void ChangeIPv6();
 };
