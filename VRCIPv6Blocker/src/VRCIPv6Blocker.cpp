@@ -163,6 +163,10 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 		CreateScheduledTaskWithShortcut();
 		return TRUE;
 
+	case IDC_BUTTON_DELTS:
+		DeleteTask();
+		return TRUE;
+
 	case IDC_BUTTON_SAVE:
 		GetSetting();
 		SaveSetting();
@@ -826,7 +830,7 @@ bool VRCIPv6BlockerApp::CreateShortcut() {
 		WCHAR szModuleFile[MAX_PATH] = {};
 		::GetModuleFileNameW(m_hInstance, szModuleFile, std::size(szModuleFile));
 		szModuleFile[std::size(szModuleFile) - 1] = L'\0';
-		if (!ydk::CreateShortcut(szFileName, L"schtasks", (L"\"" + m_ModulePath + L"\"").c_str(), szModuleFile, -IDI_APPICON, arg.c_str())) {
+		if (!ydk::CreateShortcut(szFileName, L"schtasks", L"C:\\WINDOWS\\system32\\", szModuleFile, -IDI_APPICON, arg.c_str())) {
 			m_Logger->LogError(L"ショートカットの作成に失敗しました");
 			return false;
 		}
@@ -861,6 +865,9 @@ void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
 
 	HRESULT hr = ydk::RegisterTaskScheduler(REGISTER_NAME, szPath, ARG_AUTORUN, m_ModulePath.c_str());
 	if (FAILED(hr)) {
+		WCHAR szbuf[100];
+		::swprintf_s(szbuf, std::size(szbuf), L"hr=%lu(0x%08X)", hr, hr);
+		m_Logger->LogError(szbuf);
 		// ログ等
 		m_Logger->LogError(L"タスクスケジューラの登録でエラーが発生しました");
 		::MessageBoxW(m_hWnd, L"タスクスケジューラの登録でエラーが発生しました", L"エラー", MB_ICONERROR | MB_OK);
@@ -872,4 +879,30 @@ void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
 
 	// ショートカット作るぞ
 	CreateShortcut();
+}
+
+void VRCIPv6BlockerApp::DeleteTask() {
+	if (::MessageBoxW(
+		m_hWnd,
+		L"タスクを削除すると作成したショートカットも無効になりますがいいですか？\n"
+		L"再度登録するにはショートカットを作り直してください",
+		L"確認",
+		MB_ICONQUESTION | MB_YESNO
+	) != IDYES) {
+		return;
+	}
+	if (FAILED(ydk::RemoveTaskScheduler(REGISTER_NAME))) {
+		m_Logger->LogError(L"タスクスケジューラの削除に失敗しました");
+		::MessageBoxW(m_hWnd, L"タスクスケジューラの削除に失敗しました", L"エラー", MB_ICONERROR | MB_OK);
+	}
+	else {
+		m_Logger->LogWarning(L"タスクスケジューラから削除しました");
+		::MessageBoxW(m_hWnd,
+			L"タスクスケジューラから削除しました\n"
+			L"現在のショートカットは無効になりますので再度登録する場合はショートカットから作り直してください",
+			L"通知",
+			MB_ICONINFORMATION | MB_OK);
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), ydk::IsExistSchedule(REGISTER_NAME));
+	}
+
 }
