@@ -173,6 +173,7 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 		// 一応スレッド終了待ち
 		::Sleep(PROCESS_MONITOR_INTERVAL);
 	}
+	if(m_isAutoRun) AutoExit();
     return ydk::DialogAppBase::OnClose(hDlg);
 }
 
@@ -181,7 +182,7 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
     switch (message) {
         // ウインドウメッセージの処理をこの辺に書く予定
 	case WM_SHOWWINDOW:
-		if (wParam && m_Setting.uMinWindow == BST_CHECKED) {
+		if (m_isAutoRun && wParam && m_Setting.uMinWindow == BST_CHECKED) {
 			m_Logger->Log(L"最小化します");
 			::SendMessage(m_hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
 		}
@@ -200,7 +201,6 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 			m_hWaitThread = nullptr;
 		}
 		if (m_isAutoRun && m_Setting.uAutoShutdown == BST_CHECKED) {
-			AutoExit();
 			m_Logger->Log(L"自動終了によりアプリの終了を開始します");
 			::SendMessage(m_hWnd, WM_CLOSE, 0, 0);
 		}
@@ -505,7 +505,7 @@ void VRCIPv6BlockerApp::DumpSetting() {
 }
 
 void VRCIPv6BlockerApp::CheckDialogControl() {
-	if (m_isAutoRun || (m_Setting.uRunVRC == BST_CHECKED && m_Setting.strExecutePath.length() > 0)) {
+	if (m_isAutoRun && m_Setting.uRunVRC == BST_CHECKED && m_Setting.strExecutePath.length() > 0) {
 		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_RUNVRC), FALSE);
 	}
 	else {
@@ -525,6 +525,7 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	}
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_FIREWALL), !m_isAutoRun && m_Setting.uFirewallBlock == BST_CHECKED);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_IPV6), !m_isAutoRun && m_Setting.uFirewallBlock != BST_CHECKED);
+
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_REF), !m_isAutoRun);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_MAKELINK), !m_isAutoRun);
@@ -796,9 +797,10 @@ void VRCIPv6BlockerApp::AutoExit() {
 		}
 	}
 	else {
-		// IPv6有効化の場合
-		if (!m_isIPv6Enabled && m_Setting.uRevert == BST_CHECKED) {
-			ChangeIPv6();
+		// IPv6有効化の場合（もともと無効だったら無効のまま）
+		if (!m_isIPv6Enabled) {
+			if(m_Setting.uRevert == BST_CHECKED) ChangeIPv6();
+			else m_Logger->Log(L"IPv6はもともと無効かエラーだったためスキップします");
 		}
 		else {
 			m_Logger->LogWarning(L"IPv6は有効のためスキップします");
