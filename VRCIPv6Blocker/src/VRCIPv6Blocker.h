@@ -114,4 +114,5 @@ private:
 	void AutoExit();
 	bool CreateShortcut();
 	void CreateScheduledTaskWithShortcut();
+	void DeleteTask();
 };

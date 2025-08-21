@@ -94,17 +94,18 @@ namespace ydk {
 		ComPtr<ITaskSettings> settings;
 		hr = def->get_Settings(settings.put());
 		if (FAILED(hr)) return hr;
-
+		hr = settings->put_Compatibility(TASK_COMPATIBILITY_V2_4);
+		if (FAILED(hr)) settings->put_Compatibility(TASK_COMPATIBILITY_V2_3);
 		hr = settings->put_AllowDemandStart(VARIANT_TRUE);                  if (FAILED(hr)) return hr;
 		hr = settings->put_RunOnlyIfIdle(VARIANT_FALSE);                    if (FAILED(hr)) return hr;
 		hr = settings->put_DisallowStartIfOnBatteries(VARIANT_FALSE);       if (FAILED(hr)) return hr;
 		hr = settings->put_StopIfGoingOnBatteries(VARIANT_FALSE);           if (FAILED(hr)) return hr;
 		hr = settings->put_MultipleInstances(TASK_INSTANCES_IGNORE_NEW);    if (FAILED(hr)) return hr;
 		hr = settings->put_StartWhenAvailable(VARIANT_FALSE);               if (FAILED(hr)) return hr;
-		hr = settings->put_AllowHardTerminate(VARIANT_TRUE);                if (FAILED(hr)) return hr;
+		hr = settings->put_AllowHardTerminate(VARIANT_FALSE);                if (FAILED(hr)) return hr;
 		hr = settings->put_ExecutionTimeLimit(BStr(L"PT0S"));               if (FAILED(hr)) return hr;
 		hr = settings->put_RestartCount(0);                                 if (FAILED(hr)) return hr;
-		hr = settings->put_RestartInterval(BStr(L"PT0S"));                  if (FAILED(hr)) return hr;
+		// hr = settings->put_RestartInterval(BStr(L"PT0S"));                  if (FAILED(hr)) return hr;
 		hr = settings->put_Enabled(VARIANT_TRUE);                           if (FAILED(hr)) return hr;
 		hr = settings->put_WakeToRun(VARIANT_FALSE);                        if (FAILED(hr)) return hr;
 		hr = settings->put_Priority(5);                                     if (FAILED(hr)) return hr;
@@ -144,6 +145,11 @@ namespace ydk {
 		// 設定適用
 		hr = ApplySettings(def.get());
 		if (FAILED(hr)) return hr;
+
+		ComPtr<IRegistrationInfo> reg;
+		if (SUCCEEDED(def->get_RegistrationInfo(reg.put())) && reg.get()) {
+			reg->put_Version(BStr(L"1.4"));   // Win10
+		}
 
 		// アクション
 		hr = AddExecAction(def.get(), exePath, arguments, workDir);
