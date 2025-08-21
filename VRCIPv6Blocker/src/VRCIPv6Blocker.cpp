@@ -792,7 +792,7 @@ void VRCIPv6BlockerApp::AutoStart() {
 	}
 	else {
 		::Sleep(500); // なんか設定反映にラグがあったら嫌だから念のため500msほど待ってみる（不毛？）
-		VRCExecuter();
+		if(m_Setting.uRunVRC == BST_CHECKED) VRCExecuter();
 	}
 }
 
