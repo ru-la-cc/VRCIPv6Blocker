@@ -54,7 +54,8 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	CheckIPv6Setting();
 	m_isFirewallBlocked = IsFirewallRegistered();
 	SetSetting();
-	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !ydk::IsExistSchedule(REGISTER_NAME));
+
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), ydk::IsExistSchedule(REGISTER_NAME));
 
 	SetVRCProcessId(GetVRChatProcess());
 
@@ -130,33 +131,37 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 		return TRUE;
 
 	case IDC_BUTTON_REF:
-	{
-		std::wstring extensions;
-		extensions.reserve(128);
-		extensions += L"実行可能ファイル(";
-		for (int i = 0; i < std::size(ydk::WhiteListExt); ++i) {
-			if (i) extensions += L";";
-			extensions += L"*";
-			extensions += ydk::WhiteListExt[i];
-		}
-		extensions += L")";
-		extensions.append(1, L'\0');
-		for (int i = 0; i < std::size(ydk::WhiteListExt); ++i) {
-			if (i) extensions += L";";
-			extensions += L"*";
-			extensions += ydk::WhiteListExt[i];
-		}
-		extensions.append(2, L'\0');
+		{
+			std::wstring extensions;
+			extensions.reserve(128);
+			extensions += L"実行可能ファイル(";
+			for (int i = 0; i < std::size(ydk::WhiteListExt); ++i) {
+				if (i) extensions += L";";
+				extensions += L"*";
+				extensions += ydk::WhiteListExt[i];
+			}
+			extensions += L")";
+			extensions.append(1, L'\0');
+			for (int i = 0; i < std::size(ydk::WhiteListExt); ++i) {
+				if (i) extensions += L";";
+				extensions += L"*";
+				extensions += ydk::WhiteListExt[i];
+			}
+			extensions.append(2, L'\0');
 
-		WCHAR szFileName[MAX_PATH] = L"\0";
-		if (ydk::OpenFileName(m_hWnd, szFileName, std::size(szFileName), L"起動用ショートカットかプログラム",
-			OFN_FILEMUSTEXIST | OFN_HIDEREADONLY,
-			extensions.c_str()
-		)) {
-			::SetDlgItemTextW(m_hWnd, IDC_EDIT_LINK, szFileName);
+			WCHAR szFileName[MAX_PATH] = L"\0";
+			if (ydk::OpenFileName(m_hWnd, szFileName, std::size(szFileName), L"起動用ショートカットかプログラム",
+				OFN_FILEMUSTEXIST | OFN_HIDEREADONLY,
+				extensions.c_str()
+			)) {
+				::SetDlgItemTextW(m_hWnd, IDC_EDIT_LINK, szFileName);
+			}
 		}
-	}
-	return TRUE;
+		return TRUE;
+
+	case IDC_BUTTON_MAKELINK:
+		CreateScheduledTaskWithShortcut();
+		return TRUE;
 
 	case IDC_BUTTON_SAVE:
 		GetSetting();
@@ -223,6 +228,7 @@ unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
 		if (app->GetVRCProcessId()) {
 			if (!isRunning) {
 				isRunning = true;
+				app->m_Logger->Log(L"VRChatのプロセスを検出しました");
 				::SetDlgItemText(app->m_hWnd, IDC_STATIC_STATUS, L"VRChat起動中");
 			}
 		}
@@ -808,9 +814,36 @@ void VRCIPv6BlockerApp::AutoExit() {
 	}
 }
 
+bool VRCIPv6BlockerApp::CreateShortcut() {
+	WCHAR szFileName[MAX_PATH] = L"IPv6BlockWithVRC";
+	if (ydk::SaveFileName(m_hWnd, szFileName, std::size(szFileName), L"ショートカットの保存先",
+		OFN_OVERWRITEPROMPT,
+		L"ショートカット(*.lnk)\0 * .lnk\0\0"
+	)) {
+		auto arg = std::wstring(L"/run /tn \"");
+		arg += REGISTER_NAME;
+		arg += L"\"";
+		WCHAR szModuleFile[MAX_PATH] = {};
+		::GetModuleFileNameW(m_hInstance, szModuleFile, std::size(szModuleFile));
+		szModuleFile[std::size(szModuleFile) - 1] = L'\0';
+		if (!ydk::CreateShortcut(szFileName, L"schtasks", (L"\"" + m_ModulePath + L"\"").c_str(), szModuleFile, -IDI_APPICON, arg.c_str())) {
+			m_Logger->LogError(L"ショートカットの作成に失敗しました");
+			return false;
+		}
+		else {
+			m_Logger->LogError(L"ショートカットを作成しました");
+			::MessageBoxW(m_hWnd,
+				L"ショートカットを作成しました\nもしアプリのフォルダを変更する場合は作り直してください",
+				L"通知",
+				MB_ICONINFORMATION | MB_OK);
+			return true;
+		}
+	}
+	return false;
+}
+
 void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
-	bool isExist = ydk::IsExistSchedule(REGISTER_NAME);
-	if (isExist) {
+	if (ydk::IsExistSchedule(REGISTER_NAME)) {
 		if (::MessageBoxW(
 				m_hWnd,
 				L"既に同名のタスクがあります。\n更新していいですか？",
@@ -830,10 +863,13 @@ void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
 	if (FAILED(hr)) {
 		// ログ等
 		m_Logger->LogError(L"タスクスケジューラの登録でエラーが発生しました");
+		::MessageBoxW(m_hWnd, L"タスクスケジューラの登録でエラーが発生しました", L"エラー", MB_ICONERROR | MB_OK);
+		return;
 	}
 	else {
-		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !ydk::IsExistSchedule(REGISTER_NAME));
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), ydk::IsExistSchedule(REGISTER_NAME));
 	}
 
 	// ショートカット作るぞ
+	CreateShortcut();
 }
