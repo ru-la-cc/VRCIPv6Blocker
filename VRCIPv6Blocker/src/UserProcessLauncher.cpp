@@ -193,12 +193,13 @@ namespace ydk {
 
 	// ---- .url read ----
 	inline bool read_url_from_urlfile(const std::wstring& urlFile, std::wstring& outUrl) {
-		wchar_t buf[8192] = {};
+		thread_local wchar_t buf[8192] = {};
 		DWORD n = GetPrivateProfileStringW(L"InternetShortcut", L"URL", L"", buf, (DWORD)std::size(buf), urlFile.c_str());
 		if (n == 0) { SetLastError(ERROR_BAD_PATHNAME); return false; }
 		outUrl.assign(buf, n);
 		return !outUrl.empty();
 	}
+
 	inline std::wstring associated_exe_for_scheme(std::wstring_view url) {
 		size_t pos = url.find(L':');
 		if (pos == std::wstring_view::npos || pos == 0) return L"";

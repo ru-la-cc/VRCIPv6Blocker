@@ -619,16 +619,16 @@ bool VRCIPv6BlockerApp::IsFirewallRegistered() {
 
 void VRCIPv6BlockerApp::SetFirewall() {
 	if (m_BlockList.size() == 0) {
-		m_Logger->LogError(L"有効なルールが存在しないため設定は行いません");
+		m_Logger->LogError(L"有効なFirewallのルールが存在しないため設定は行いません");
 		return;
 	}
 
 	m_isFirewallBlocked = IsFirewallRegistered();
 
 	if(!ydk::RegisterFirewallRule(REGISTER_NAME, m_BlockList, nullptr, L"VRChat IPv6 Block Rule")){
-		m_Logger->LogError(L"ルールの登録に失敗");
+		m_Logger->LogError(L"Firewallのルール登録に失敗");
 	} else {
-		m_Logger->Log(L"Firewallに設定を登録しました");
+		m_Logger->Log(L"Firewallにルールを登録しました");
 		m_isFirewallBlocked = true;
 	}
 	GetSetting();
@@ -639,11 +639,11 @@ void VRCIPv6BlockerApp::RemoveFirewall() {
 	HRESULT hr;
 	if (ydk::RemoveFirewallRule(REGISTER_NAME, &hr)) {
 		if (hr == S_OK) {
-			m_Logger->Log(L"対象のルールを削除しました");
+			m_Logger->Log(L"Firewallの対象ルールを削除しました");
 			m_isFirewallBlocked = false;
 		}
 		else if (hr == S_FALSE) {
-			m_Logger->LogWarning(L"対象のルールがありません");
+			m_Logger->LogWarning(L"Firewallの対象ルールがありません");
 			m_isFirewallBlocked = false;
 		}
 		else {
@@ -780,6 +780,7 @@ void VRCIPv6BlockerApp::AutoStart() {
 		m_Logger->LogWarning(L"VRChatはすでに起動中です");
 	}
 	else {
+		::Sleep(500); // なんか設定反映にラグがあったら嫌だから念のため500msほど待ってみる（不毛？）
 		VRCExecuter();
 	}
 }
