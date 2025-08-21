@@ -112,5 +112,6 @@ private:
 	void ChangeIPv6();
 	void AutoStart();
 	void AutoExit();
+	bool CreateShortcut();
 	void CreateScheduledTaskWithShortcut();
 };
