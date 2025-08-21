@@ -54,6 +54,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	CheckIPv6Setting();
 	m_isFirewallBlocked = IsFirewallRegistered();
 	SetSetting();
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !ydk::IsExistSchedule(REGISTER_NAME));
 
 	SetVRCProcessId(GetVRChatProcess());
 
@@ -317,7 +318,6 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 		m_Logger->LogError(L"コマンドライン引数の読込に失敗しました");
 	}
 	else {
-		constexpr LPCWSTR ARG_AUTORUN = L"-autorun";
 		for (int i = 0; i < m_argc; ++i) {
 			m_isAutoRun = std::wcscmp(m_lpArgList[i], ARG_AUTORUN) == 0;
 		}
@@ -804,4 +804,34 @@ void VRCIPv6BlockerApp::AutoExit() {
 			m_Logger->LogWarning(L"IPv6は有効のためスキップします");
 		}
 	}
+}
+
+void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
+	bool isExist = ydk::IsExistSchedule(REGISTER_NAME);
+	if (isExist) {
+		if (::MessageBoxW(
+				m_hWnd,
+				L"既に同名のタスクがあります。\n更新していいですか？",
+				L"確認",
+				MB_ICONQUESTION | MB_YESNO
+			) != IDYES) {
+			return;
+		}
+		m_Logger->LogWarning(L"現在のタスクスケジューラの設定を上書きします");
+	}
+
+	WCHAR szPath[MAX_PATH];
+	::GetModuleFileNameW(m_hInstance, szPath, std::size(szPath));
+	szPath[std::size(szPath) - 1] = L'\0'; // ねんのため
+
+	HRESULT hr = ydk::RegisterTaskScheduler(REGISTER_NAME, szPath, ARG_AUTORUN, m_ModulePath.c_str());
+	if (FAILED(hr)) {
+		// ログ等
+		m_Logger->LogError(L"タスクスケジューラの登録でエラーが発生しました");
+	}
+	else {
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !ydk::IsExistSchedule(REGISTER_NAME));
+	}
+
+	// ショートカット作るぞ
 }

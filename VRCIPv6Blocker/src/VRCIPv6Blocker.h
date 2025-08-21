@@ -39,6 +39,7 @@ public:
 	LPCWSTR IK_VRCFILE = L"VRCFile";
 	LPCWSTR IK_DESTIP = L"DestIp";
 	LPCWSTR IK_NIC = L"NIC";
+	LPCWSTR ARG_AUTORUN = L"-autorun";
 
 	virtual ~VRCIPv6BlockerApp();
 	inline constexpr ydk::IFileLogger<WCHAR>* Logger() const { return m_Logger; }
@@ -76,6 +77,7 @@ private:
 	HANDLE m_hWaitThread = nullptr;
 	bool m_isFirewallBlocked = false;
 	bool m_isIPv6Enabled = true;
+	bool m_isTaskExist = false;
 	ydk::AdapterKey m_adapterKey = {};
 
 	// 設定関連
@@ -110,5 +112,5 @@ private:
 	void ChangeIPv6();
 	void AutoStart();
 	void AutoExit();
-
+	void CreateScheduledTaskWithShortcut();
 };
