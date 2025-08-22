@@ -55,7 +55,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	m_isFirewallBlocked = IsFirewallRegistered();
 	SetSetting();
 
-	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), ydk::IsExistSchedule(REGISTER_NAME));
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
 
 	SetVRCProcessId(GetVRChatProcess());
 
@@ -785,22 +785,24 @@ void VRCIPv6BlockerApp::ChangeIPv6() {
 }
 
 void VRCIPv6BlockerApp::AutoStart() {
-	if (m_Setting.uFirewallBlock == BST_CHECKED) {
-		// ファイアウォールにブロックを追加する場合
-		if (!m_isFirewallBlocked) {
-			ChangeFireWall();
+	if (m_Setting.uNonBlocking == BST_UNCHECKED) {
+		if (m_Setting.uFirewallBlock == BST_CHECKED) {
+			// ファイアウォールにブロックを追加する場合
+			if (!m_isFirewallBlocked) {
+				ChangeFireWall();
+			}
+			else {
+				m_Logger->LogWarning(L"ファイアウォール登録済みのためスキップします");
+			}
 		}
 		else {
-			m_Logger->LogWarning(L"ファイアウォール登録済みのためスキップします");
-		}
-	}
-	else {
-		// IPv6無効化の場合
-		if (m_isIPv6Enabled) {
-			ChangeIPv6();
-		}
-		else {
-			m_Logger->LogWarning(L"IPv6は無効のためスキップします");
+			// IPv6無効化の場合
+			if (m_isIPv6Enabled) {
+				ChangeIPv6();
+			}
+			else {
+				m_Logger->LogWarning(L"IPv6は無効のためスキップします");
+			}
 		}
 	}
 
@@ -815,23 +817,25 @@ void VRCIPv6BlockerApp::AutoStart() {
 }
 
 void VRCIPv6BlockerApp::AutoExit() {
-	if (m_Setting.uFirewallBlock == BST_CHECKED) {
-		// ファイアウォールのブロックを解除する場合
-		if (m_isFirewallBlocked) {
-			ChangeFireWall();
+	if (m_Setting.uNonBlocking == BST_UNCHECKED) {
+		if (m_Setting.uFirewallBlock == BST_CHECKED) {
+			// ファイアウォールのブロックを解除する場合
+			if (m_isFirewallBlocked) {
+				ChangeFireWall();
+			}
+			else {
+				m_Logger->LogWarning(L"ファイアウォールに登録されていません");
+			}
 		}
 		else {
-			m_Logger->LogWarning(L"ファイアウォールに登録されていません");
-		}
-	}
-	else {
-		// IPv6有効化の場合（もともと無効だったら無効のまま）
-		if (!m_isIPv6Enabled) {
-			if(m_Setting.uRevert == BST_CHECKED) ChangeIPv6();
-			else m_Logger->Log(L"IPv6はもともと無効かエラーだったためスキップします");
-		}
-		else {
-			m_Logger->LogWarning(L"IPv6は有効のためスキップします");
+			// IPv6有効化の場合（もともと無効だったら無効のまま）
+			if (!m_isIPv6Enabled) {
+				if (m_Setting.uRevert == BST_CHECKED) ChangeIPv6();
+				else m_Logger->Log(L"IPv6はもともと無効かエラーだったためスキップします");
+			}
+			else {
+				m_Logger->LogWarning(L"IPv6は有効のためスキップします");
+			}
 		}
 	}
 }
@@ -895,7 +899,7 @@ void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
 		return;
 	}
 	else {
-		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), ydk::IsExistSchedule(REGISTER_NAME));
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
 	}
 
 	// ショートカット作るぞ
@@ -923,7 +927,7 @@ void VRCIPv6BlockerApp::DeleteTask() {
 			L"現在のショートカットは無効になりますので再度登録する場合はショートカットから作り直してください",
 			L"通知",
 			MB_ICONINFORMATION | MB_OK);
-		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), ydk::IsExistSchedule(REGISTER_NAME));
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
 	}
 
 }
