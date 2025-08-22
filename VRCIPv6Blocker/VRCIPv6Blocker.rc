@@ -133,7 +133,7 @@ BEGIN
             VALUE "FileDescription", "VRCIPv6Blocker"
             VALUE "FileVersion", "0.0.1.0"
             VALUE "InternalName", "VRCIPv6Blocker"
-            VALUE "LegalCopyright", "Copyright (C) 2025 by - Nma"
+            VALUE "LegalCopyright", "Copyright (C) 2025  Nma"
             VALUE "OriginalFilename", "VRCIPv6Blocker.exe"
             VALUE "ProductName", "VRCIPv6Blocker"
             VALUE "ProductVersion", "0.0.1.0"
