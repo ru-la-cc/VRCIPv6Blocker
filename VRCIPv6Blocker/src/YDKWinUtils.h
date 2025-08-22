@@ -10,7 +10,7 @@ namespace ydk {
 	int GetToUtf16Size(LPCSTR lpUtf8);
 	int ToUtf8(LPCWSTR lpUtf16, LPSTR lpUtf8, int buflen);
 	int ToUtf16(LPCSTR lpUtf8, LPWSTR lpUtf16, int buflen);
-	[[nodiscard]] FILE* OpenReadFile(LPCWSTR lpFileName);
+	[[nodiscard]] FILE* OpenReadFile(LPCWSTR lpFileName, bool isCreate = true);
 	[[nodiscard]] FILE* OpenWriteFile(LPCWSTR lpFileName);
 	[[nodiscard]] std::wstring GetErrorMessage(DWORD dwError);
 	void GetAppVersion(PWORD pV1, PWORD pV2, PWORD pV3, PWORD pV4);

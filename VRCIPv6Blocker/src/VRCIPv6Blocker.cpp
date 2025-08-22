@@ -59,13 +59,12 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 
 	SetVRCProcessId(GetVRChatProcess());
 
+	::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatのプロセスを確認しています...");
 	if (GetVRCProcessId()) {
 		m_Logger->LogWarning(L"VRChatが既に起動中");
-		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChat起動中");
 	}
 	else {
 		m_Logger->Log(L"VRChatは起動していません");
-		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatは起動していません");
 	}
 
 	if (m_Setting.uNonBlocking == BST_CHECKED) {
@@ -214,7 +213,14 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 			::SendMessage(m_hWnd, WM_CLOSE, 0, 0);
 		}
 		return TRUE;
-    }
+	case WM_SET_CTRLTEXT:
+		::SetDlgItemTextW(m_hWnd, static_cast<int>(wParam), reinterpret_cast<LPCWSTR>(lParam));
+		return TRUE;
+
+	case WM_ERR_MESSAGE:
+		::MessageBox(m_hWnd, reinterpret_cast<LPCWSTR>(lParam), L"エラー", MB_ICONERROR | MB_OK);
+		return TRUE;
+	}
 
     return ydk::DialogAppBase::HandleMessage(hDlg, message, wParam, lParam);
 }
@@ -228,21 +234,25 @@ unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
 	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
 	app->SetStopFlag(false);
 	bool isRunning = false;
+	bool isInit = true;
+
+	app->m_Logger->Log(L"VRChatプロセス監視スレッドの開始");
 	while (!app->GetStopFlag()) {
 		if (app->GetVRCProcessId()) {
 			if (!isRunning) {
 				isRunning = true;
 				app->m_Logger->Log(L"VRChatのプロセスを検出しました");
-				::SetDlgItemText(app->m_hWnd, IDC_STATIC_STATUS, L"VRChat起動中");
+				::PostMessageW(app->m_hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(L"VRChat起動中"));
 			}
 		}
 		else {
-			if(isRunning) {
+			if(isRunning || isInit) {
 				isRunning = false;
-				::SetDlgItemText(app->m_hWnd, IDC_STATIC_STATUS, L"VRChatは起動していません");
+				isInit = false;
+				::PostMessageW(app->m_hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(L"VRChatは起動していません"));
 			}
 		}
-
+		
 		app->SetVRCProcessId(app->GetVRChatProcess());
 		if (app->m_hWaitThread == nullptr && app->GetVRCProcessId()) {
 			app->m_hWaitThread = reinterpret_cast<HANDLE>(::_beginthreadex(nullptr, 0, ProcessExitNotifyThread, app, 0, nullptr));
@@ -250,10 +260,15 @@ unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
 				auto err = ydk::GetErrorMessage(::GetLastError());
 				app->m_Logger->LogError(L"待機用のワーカースレッドが起動できなかった...");
 				app->m_Logger->LogError((L"GetLastError = " + err).c_str());
-				::MessageBox(app->m_hWnd,
-					L"VRChatの終了待機用スレッドが起動できませんでした\n自動では終了しないためアプリを閉じる場合は×で閉じてください",
-					L"エラー",
-					MB_ICONERROR | MB_OK);
+				::PostMessageW(app->m_hWnd,
+					WM_ERR_MESSAGE,
+					0,
+					reinterpret_cast<LPARAM>(
+						L"VRChatの終了待機用スレッドが起動できませんでした\n"
+						L"なにもできないのでアプリを終了してください"
+					)
+				);
+				break;
 			}
 		}
 		for (int i = 0; i < SLEEP_CYCLES; ++i) { // プロセス監視するのは1秒おきくらいでいいと思ってる
@@ -629,8 +644,11 @@ bool VRCIPv6BlockerApp::IsFirewallRegistered() {
 }
 
 void VRCIPv6BlockerApp::SetFirewall() {
-	if (m_BlockList.size() == 0) {
-		m_Logger->LogError(L"有効なFirewallのルールが存在しないため設定は行いません");
+	if (m_BlockList.empty()) {
+		m_Logger->LogError(L"有効なブロック対象アドレスがないため設定は行いません");
+		if (!m_isAutoRun) {
+			::MessageBoxW(m_hWnd, L"有効なブロック対象アドレスがないため設定は行いません", L"警告", MB_ICONWARNING | MB_OK);
+		}
 		return;
 	}
 
@@ -672,7 +690,7 @@ void VRCIPv6BlockerApp::RemoveFirewall() {
 bool VRCIPv6BlockerApp::SetIPv6(bool isEnable) {
 	HRESULT hr = ydk::SetIPv6Enable(isEnable, &m_adapterKey, m_Setting.strDestIp.c_str());
 	if (hr == S_OK) {
-		m_Logger->Log((std::wstring(L"IPv6を") + (isEnable ? L"有効化しました" : L"無効化しました")).c_str());
+		m_Logger->Log((std::wstring(L"IPv6 : ") + (isEnable ? L"有効化" : L"無効化")).c_str());
 		m_isIPv6Enabled = isEnable;
 	}
 	else if (hr == S_FALSE) {
@@ -699,7 +717,7 @@ bool VRCIPv6BlockerApp::DeserializeGuid(LPCWSTR lpStr, GUID& guid) {
 
 void VRCIPv6BlockerApp::WriteGuid(LPCWSTR lpGuid) {
 	m_Setting.strNIC = lpGuid;
-	m_Setting.uRevert = lpGuid == nullptr ? BST_UNCHECKED : BST_CHECKED;
+	if(lpGuid == nullptr || m_Setting.uFirewallBlock) m_Setting.uRevert = BST_UNCHECKED;
 	WCHAR szChk[32];
 	::swprintf_s(szChk, L"%u", m_Setting.uRevert);
 	::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szChk, m_IniFile.c_str());
@@ -819,7 +837,7 @@ void VRCIPv6BlockerApp::AutoExit() {
 }
 
 bool VRCIPv6BlockerApp::CreateShortcut() {
-	WCHAR szFileName[MAX_PATH] = L"IPv6BlockWithVRC";
+	WCHAR szFileName[MAX_PATH] = L"VRChat - IPv6 Block";
 	if (ydk::SaveFileName(m_hWnd, szFileName, std::size(szFileName), L"ショートカットの保存先",
 		OFN_OVERWRITEPROMPT,
 		L"ショートカット(*.lnk)\0 * .lnk\0\0"
@@ -837,7 +855,10 @@ bool VRCIPv6BlockerApp::CreateShortcut() {
 		else {
 			m_Logger->LogError(L"ショートカットを作成しました");
 			::MessageBoxW(m_hWnd,
-				L"ショートカットを作成しました\nもしアプリのフォルダを変更する場合は作り直してください",
+				L"ショートカットを作成しました\n"
+				L"このアプリを終了して作成したショートカットから起動してください\n"
+				L"後で設定を変更する場合はこのアプリを直接起動してください\n"
+				L"※もしアプリのフォルダを変更する場合は作り直してください",
 				L"通知",
 				MB_ICONINFORMATION | MB_OK);
 			return true;
