@@ -53,7 +53,7 @@ namespace ydk {
 		return result;
 	}
 
-	FILE* OpenReadFile(LPCWSTR lpFileName) {
+	FILE* OpenReadFile(LPCWSTR lpFileName, bool isCreate) {
 		HANDLE hFile;
 		int fd;
 		FILE* pfile;
@@ -62,7 +62,7 @@ namespace ydk {
 							GENERIC_READ,
 							FILE_SHARE_READ,
 							nullptr,
-							OPEN_EXISTING,
+							isCreate ? OPEN_ALWAYS : OPEN_EXISTING,
 							FILE_ATTRIBUTE_NORMAL,
 							nullptr);
 		if (hFile == INVALID_HANDLE_VALUE) return nullptr;

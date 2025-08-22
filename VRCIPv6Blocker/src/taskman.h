@@ -15,7 +15,7 @@ namespace ydk {
 		const wchar_t* workDir = nullptr) noexcept;
 
 	// タスクの存在確認（ルートフォルダ直下にあるか）
-	bool IsExistSchedule(const wchar_t* taskName) noexcept;
+	[[nodiscard]] bool IsExistSchedule(const wchar_t* taskName) noexcept;
 
 	// タスクの削除（存在しなくても成功扱い）
 	HRESULT RemoveTaskScheduler(const wchar_t* taskName) noexcept;

@@ -26,6 +26,8 @@ public:
 	};
 
 	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
+	static inline constexpr UINT WM_SET_CTRLTEXT = WM_APP + 2;
+	static inline constexpr UINT WM_ERR_MESSAGE = WM_APP + 3;
 
 	static constexpr LPCWSTR REGISTER_NAME = APP_GUID L"_" APP_NAME;
 	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
