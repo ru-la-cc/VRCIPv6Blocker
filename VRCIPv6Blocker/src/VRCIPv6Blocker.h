@@ -117,4 +117,8 @@ private:
 	bool CreateShortcut();
 	void CreateScheduledTaskWithShortcut();
 	void DeleteTask();
+
+	// ---------------------------- 以下、検討中件検証中 ...
+	std::wstring GetLinkPath(LPCWSTR lpLinkFile);
+	bool GetExeFilePath(LPCWSTR lpLaunchPath, std::wstring& exePath);
 };
