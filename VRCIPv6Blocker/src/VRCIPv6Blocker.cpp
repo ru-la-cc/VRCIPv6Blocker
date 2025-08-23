@@ -12,9 +12,11 @@
 #include <strsafe.h>
 #include <tlhelp32.h>
 #include <process.h>
+#include <pathcch.h>
 
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Comdlg32.lib")
+#pragma comment(lib, "pathcch.lib")
 
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
     // デストラクタ（コンストラクタはprivate↓）
@@ -929,5 +931,70 @@ void VRCIPv6BlockerApp::DeleteTask() {
 			MB_ICONINFORMATION | MB_OK);
 		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
 	}
-
 }
+
+// ---------------------------- 以下、検討中件検証中 ...
+
+std::wstring VRCIPv6BlockerApp::GetLinkPath(LPCWSTR lpLinkFile) {
+	std::wstring url, exe, fullCmd, workDir;
+	int showCmd;
+	LPCWSTR lpExt = ::PathFindExtensionW(lpLinkFile); {
+		if (!::_wcsicmp(lpExt, L".url")) {
+			m_Logger->Log((std::wstring(L"url resolve -> ") + lpLinkFile).c_str());
+			if (ydk::GetExecutableFromUrlFile(
+					lpLinkFile, url, exe, fullCmd, workDir, showCmd)
+				== ydk::UrlResolveMode::CommandLine
+				) {
+				m_Logger->Log((L"urlの指すパス : " + exe).c_str());
+			}
+			else {
+				m_Logger->LogError(L"urlの解決に失敗");
+				exe = L"";
+			}
+			return exe;
+		}
+		else if (!::_wcsicmp(lpExt, L".lnk")) {
+			m_Logger->Log((std::wstring(L"lnk resolve -> ") + lpLinkFile).c_str());
+			if (ydk::GetExecutableFromLnk(lpLinkFile, exe, fullCmd, workDir, showCmd)) {
+				m_Logger->Log((L"lnkの指すパス : " + exe).c_str());
+			}
+			else {
+				m_Logger->LogError(L"urlの解決に失敗");
+				exe = L"";
+			}
+			return exe;
+		}
+	}
+}
+
+bool VRCIPv6BlockerApp::GetExeFilePath(LPCWSTR lpLaunchPath, std::wstring& exePath) {
+	WCHAR szPath[MAX_PATH] = {};
+	DWORD dwAttr = ::GetFileAttributesW(lpLaunchPath);
+	if (dwAttr == INVALID_FILE_ATTRIBUTES) {
+		m_Logger->LogError(lpLaunchPath != nullptr ? lpLaunchPath : L"<null>");
+		m_Logger->LogError(L"ファイルパスがおかしいと思う");
+		return false;
+	}
+
+	::wcscpy_s(szPath, lpLaunchPath);
+	if (dwAttr & FILE_ATTRIBUTE_DIRECTORY) {
+		m_Logger->LogWarning(L"渡されたパスはフォルダです");
+	}
+	else {
+		HRESULT hr = ::PathCchRemoveFileSpec(szPath, std::size(szPath));
+		if (FAILED(hr)) {
+			m_Logger->LogError(L"パスを切り出せません");
+			return false;
+		}
+	}
+	LPCWSTR lastChar = nullptr;
+	for (LPWSTR p = szPath; *p; ++p) {
+		if (*p == L'/') *p = L'\\'; // ねんのため
+		lastChar = p;
+	}
+	exePath = szPath;
+	if (lastChar != nullptr && *lastChar != L'\\') exePath += L'\\';
+	exePath += m_Setting.strVRCFile;
+	return true;
+}
+
