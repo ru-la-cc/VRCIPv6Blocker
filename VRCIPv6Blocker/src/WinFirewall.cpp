@@ -95,13 +95,26 @@ namespace ydk {
 	// 2) 登録（同名があれば更新）。成功= true / 失敗= false
 	//    *hResult = S_OK（追加/更新どちらも）/ 失敗コード
 	bool RegisterFirewallRule(
-			LPCWSTR ruleName,
-			const std::vector<std::wstring>& remoteAddresses,
-			HRESULT* hResult,
-			LPCWSTR lpDescription
-		) {
+		LPCWSTR ruleName,
+		const std::vector<std::wstring>& remoteAddresses,
+		HRESULT* hResult,
+		LPCWSTR lpDescription,
+		LPCWSTR appExePath // 追加: 対象 exe のフルパス（null なら全プロセス）
+	) {
 		if (!IsValidRuleName(std::wstring(ruleName))) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return false; }
 		if (remoteAddresses.empty()) { SetHr(E_INVALIDARG, hResult); return false; }
+
+		// 絶対パスである保険的な検証とか
+		std::wstring exe;
+		if (appExePath && *appExePath) {
+			wchar_t buf[MAX_PATH];
+			DWORD n = ::GetFullPathNameW(appExePath, (DWORD)std::size(buf), buf, nullptr);
+			if (n == 0 || n >= std::size(buf) || GetFileAttributesW(buf) == INVALID_FILE_ATTRIBUTES) {
+				SetHr(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND), hResult);
+				return false;
+			}
+			exe.assign(buf, n);
+		}
 
 		const std::wstring joined = JoinComma(remoteAddresses);
 		if (joined.empty()) { SetHr(E_INVALIDARG, hResult); return false; }
@@ -110,28 +123,56 @@ namespace ydk {
 		HRESULT hr = GetRules(&rules);
 		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
 
-		// 既存検索
 		CComPtr<INetFwRule> rule;
 		hr = rules->Item(CComBSTR(ruleName), &rule);
 		if (SUCCEEDED(hr) && rule) {
-			// 更新
+			// 既存更新
 			if (FAILED(rule->put_Direction(NET_FW_RULE_DIR_OUT)) ||
 				FAILED(rule->put_Action(NET_FW_ACTION_BLOCK)) ||
 				FAILED(rule->put_Protocol(NET_FW_IP_PROTOCOL_ANY)) ||
 				FAILED(rule->put_Enabled(VARIANT_TRUE)) ||
 				FAILED(rule->put_Profiles(NET_FW_PROFILE2_ALL)) ||
 				FAILED(rule->put_RemoteAddresses(CComBSTR(joined.c_str())))) {
-				SetHr(E_FAIL, hResult);
-				return false;
+				SetHr(E_FAIL, hResult); return false;
 			}
-			SetHr(S_OK, hResult);
-			return true;
+			// 対象のexe指定されたら...
+			// if (appExePath && *appExePath) {
+			if (!exe.empty()) { // こっちの判定が自然か？
+				if (FAILED(rule->put_ApplicationName(CComBSTR(exe.c_str())))) {
+					SetHr(E_FAIL, hResult); return false;
+				}
+			}
+			else {
+				rule->put_ApplicationName(nullptr);
+			}
+			SetHr(S_OK, hResult); return true;
 		}
-		if (FAILED(hr) && !IsNotFound(hr)) {
-			SetHr(hr, hResult);
-			return false;
+		if (FAILED(hr) && !IsNotFound(hr)) { SetHr(hr, hResult); return false; }
+
+		// 新規作成
+		rule.Release();
+		hr = rule.CoCreateInstance(__uuidof(NetFwRule));
+		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
+
+		if (FAILED(rule->put_Name(CComBSTR(ruleName))) ||
+			FAILED(rule->put_Description(CComBSTR(lpDescription))) ||
+			FAILED(rule->put_Direction(NET_FW_RULE_DIR_OUT)) ||
+			FAILED(rule->put_Action(NET_FW_ACTION_BLOCK)) ||
+			FAILED(rule->put_Protocol(NET_FW_IP_PROTOCOL_ANY)) ||
+			FAILED(rule->put_Enabled(VARIANT_TRUE)) ||
+			FAILED(rule->put_Profiles(NET_FW_PROFILE2_ALL)) ||
+			FAILED(rule->put_RemoteAddresses(CComBSTR(joined.c_str())))) {
+			SetHr(E_FAIL, hResult); return false;
+		}
+		if (appExePath && *appExePath) {
+			if (FAILED(rule->put_ApplicationName(CComBSTR(exe.c_str())))) {
+				SetHr(E_FAIL, hResult); return false;
+			}
 		}
 
+		hr = rules->Add(rule);
+		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
+		SetHr(S_OK, hResult); return true;
 		// 新規
 		rule.Release();
 		hr = rule.CoCreateInstance(__uuidof(NetFwRule));
