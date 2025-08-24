@@ -113,8 +113,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,0,1,1
- PRODUCTVERSION 0,0,1,1
+ FILEVERSION 0,0,2,0
+ PRODUCTVERSION 0,0,2,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -131,12 +131,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "YDK Store"
             VALUE "FileDescription", "VRCIPv6Blocker"
-            VALUE "FileVersion", "0.0.1.1"
+            VALUE "FileVersion", "0.0.2.0"
             VALUE "InternalName", "VRCIPv6Blocker"
             VALUE "LegalCopyright", "Copyright (C) 2025  Nma"
             VALUE "OriginalFilename", "VRCIPv6Blocker.exe"
             VALUE "ProductName", "VRCIPv6Blocker"
-            VALUE "ProductVersion", "0.0.1.1"
+            VALUE "ProductVersion", "0.0.2.0"
         END
     END
     BLOCK "VarFileInfo"
