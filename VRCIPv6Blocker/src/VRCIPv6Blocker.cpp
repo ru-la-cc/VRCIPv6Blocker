@@ -938,33 +938,32 @@ void VRCIPv6BlockerApp::DeleteTask() {
 std::wstring VRCIPv6BlockerApp::GetLinkPath(LPCWSTR lpLinkFile) {
 	std::wstring url, exe, fullCmd, workDir;
 	int showCmd;
-	LPCWSTR lpExt = ::PathFindExtensionW(lpLinkFile); {
-		if (!::_wcsicmp(lpExt, L".url")) {
-			m_Logger->Log((std::wstring(L"url resolve -> ") + lpLinkFile).c_str());
-			if (ydk::GetExecutableFromUrlFile(
-					lpLinkFile, url, exe, fullCmd, workDir, showCmd)
-				== ydk::UrlResolveMode::CommandLine
-				) {
-				m_Logger->Log((L"urlの指すパス : " + exe).c_str());
-			}
-			else {
-				m_Logger->LogError(L"urlの解決に失敗");
-				exe = L"";
-			}
-			return exe;
+	LPCWSTR lpExt = ::PathFindExtensionW(lpLinkFile);
+	if (!::_wcsicmp(lpExt, L".url")) {
+		m_Logger->Log((std::wstring(L"url resolve -> ") + lpLinkFile).c_str());
+		if (ydk::GetExecutableFromUrlFile(
+				lpLinkFile, url, exe, fullCmd, workDir, showCmd)
+			== ydk::UrlResolveMode::CommandLine
+			) {
+			m_Logger->Log((L"urlの指すパス : " + exe).c_str());
 		}
-		else if (!::_wcsicmp(lpExt, L".lnk")) {
-			m_Logger->Log((std::wstring(L"lnk resolve -> ") + lpLinkFile).c_str());
-			if (ydk::GetExecutableFromLnk(lpLinkFile, exe, fullCmd, workDir, showCmd)) {
-				m_Logger->Log((L"lnkの指すパス : " + exe).c_str());
-			}
-			else {
-				m_Logger->LogError(L"urlの解決に失敗");
-				exe = L"";
-			}
-			return exe;
+		else {
+			m_Logger->LogError(L"urlの解決に失敗");
 		}
+		return L"";
 	}
+	else if (!::_wcsicmp(lpExt, L".lnk")) {
+		m_Logger->Log((std::wstring(L"lnk resolve -> ") + lpLinkFile).c_str());
+		if (ydk::GetExecutableFromLnk(lpLinkFile, exe, fullCmd, workDir, showCmd)) {
+			m_Logger->Log((L"lnkの指すパス : " + exe).c_str());
+		}
+		else {
+			m_Logger->LogError(L"urlの解決に失敗");
+			exe = L"";
+		}
+		return exe;
+	}
+	return L"";
 }
 
 bool VRCIPv6BlockerApp::GetExeFilePath(LPCWSTR lpLaunchPath, std::wstring& exePath) {
