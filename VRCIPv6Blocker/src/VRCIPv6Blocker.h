@@ -58,29 +58,29 @@ public:
 	static VRCIPv6BlockerApp* Instance();
 
 private:
-	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
-	LPCWSTR VRCFILENAME = L"VRChat.exe";
-	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
 	std::vector<std::wstring> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_IniFile;
-	ydk::IFileLogger<WCHAR>* m_Logger;
 	ydk::ComInitializer m_comInitializer;
-	int m_argc;
-	LPWSTR* m_lpArgList;
-	bool m_isAutoRun = false;
+	CRITICAL_SECTION m_tCs;
+	CRITICAL_SECTION m_tidCs;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
-	CRITICAL_SECTION m_tidCs;
-	DWORD m_vrcProcessId = 0;
-	CRITICAL_SECTION m_tCs;
-	bool m_isStop = false;
+	ydk::AdapterKey m_adapterKey = {};
+	ydk::IFileLogger<WCHAR>* m_Logger;
+	LPWSTR* m_lpArgList;
+	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
+	LPCWSTR VRCFILENAME = L"VRChat.exe";
 	HANDLE m_hMonThread = nullptr;
 	HANDLE m_hWaitThread = nullptr;
+	int m_argc;
+	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
+	DWORD m_vrcProcessId = 0;
+	bool m_isAutoRun = false;
+	bool m_isStop = false;
 	bool m_isFirewallBlocked = false;
 	bool m_isIPv6Enabled = true;
 	bool m_isTaskExist = false;
-	ydk::AdapterKey m_adapterKey = {};
 
 	// 設定関連
 	INI_SETTING m_Setting = {};
