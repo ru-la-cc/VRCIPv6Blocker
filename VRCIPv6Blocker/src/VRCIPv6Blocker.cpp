@@ -296,8 +296,10 @@ unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
 	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
 
 	ydk::ProcessWaiter pw(app->GetVRCProcessId());
-	app->m_Setting.strVRCFullPath = pw.GetExePath();
-	::PostMessageW(app->m_hWnd, WM_WRITE_VRCFULLPATH, 0, 0L);
+
+	// もうこれはいらん
+	// app->m_Setting.strVRCFullPath = pw.GetExePath();
+	// ::PostMessageW(app->m_hWnd, WM_WRITE_VRCFULLPATH, 0, 0L);
 
 	auto result = pw.Wait(); // 起動してなかったらすぐ制御返すはず
 	if (!pw.IsValid()) {
