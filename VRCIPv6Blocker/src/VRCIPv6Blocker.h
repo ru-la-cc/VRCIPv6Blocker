@@ -27,12 +27,24 @@ public:
 		std::wstring strVRCFullPath;
 	};
 
-	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
-	static inline constexpr UINT WM_SET_CTRLTEXT = WM_APP + 2;
-	static inline constexpr UINT WM_ERR_MESSAGE = WM_APP + 3;
-	static inline constexpr UINT WM_WRITE_VRCFULLPATH = WM_APP + 4;
-	static inline constexpr UINT WM_ENABLE_CONTROL = WM_APP + 5;
+	virtual ~VRCIPv6BlockerApp();
+	static VRCIPv6BlockerApp* Instance();
+private:
+	std::vector<std::wstring> m_BlockList;
+	std::wstring m_ModulePath;
+	std::wstring m_IniFile;
+	INI_SETTING m_Setting = {};
+	ydk::ComInitializer m_comInitializer;
+	CRITICAL_SECTION m_tCs;
+	CRITICAL_SECTION m_tidCs;
+	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
+	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
+	ydk::AdapterKey m_adapterKey = {};
+	ydk::IFileLogger<WCHAR>* m_Logger;
+	LPWSTR* m_lpArgList;
 
+	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
+	LPCWSTR VRCFILENAME = L"VRChat.exe";
 	static constexpr LPCWSTR REGISTER_NAME = APP_GUID L"_" APP_NAME;
 	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
 	LPCWSTR IK_RUNVRC = L"RunVRC";
@@ -49,39 +61,16 @@ public:
 	LPCWSTR IK_VRCFULLPATH = L"VRCFullPath";
 	LPCWSTR ARG_AUTORUN = L"-autorun";
 
-	virtual ~VRCIPv6BlockerApp();
-	inline constexpr ydk::IFileLogger<WCHAR>* Logger() const { return m_Logger; }
-
-	inline constexpr UINT GetMainDialogID() const override { return IDD_MAINDLG; }
-	bool OnInitialize() override;
-	void OnShutdown() override;
-
-	INT_PTR OnInitDialog(HWND hDlg) override;
-	INT_PTR OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) override;
-	INT_PTR OnClose(HWND hDlg) override;
-	INT_PTR HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) override;
-
-	static VRCIPv6BlockerApp* Instance();
-
-private:
-	std::vector<std::wstring> m_BlockList;
-	std::wstring m_ModulePath;
-	std::wstring m_IniFile;
-	INI_SETTING m_Setting = {};
-	ydk::ComInitializer m_comInitializer;
-	CRITICAL_SECTION m_tCs;
-	CRITICAL_SECTION m_tidCs;
-	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
-	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
-	ydk::AdapterKey m_adapterKey = {};
-	ydk::IFileLogger<WCHAR>* m_Logger;
-	LPWSTR* m_lpArgList;
-	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
-	LPCWSTR VRCFILENAME = L"VRChat.exe";
 	HANDLE m_hMonThread = nullptr;
 	HANDLE m_hWaitThread = nullptr;
+
 	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
 	DWORD m_vrcProcessId = 0;
+	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
+	static inline constexpr UINT WM_SET_CTRLTEXT = WM_APP + 2;
+	static inline constexpr UINT WM_ERR_MESSAGE = WM_APP + 3;
+	static inline constexpr UINT WM_WRITE_VRCFULLPATH = WM_APP + 4;
+	static inline constexpr UINT WM_ENABLE_CONTROL = WM_APP + 5;
 	int m_argc;
 	bool m_isAutoRun = false;
 	bool m_isStop = false;
@@ -93,6 +82,16 @@ private:
 	static unsigned __stdcall ProcessExitNotifyThread(void* param);
 
 	VRCIPv6BlockerApp();
+
+	inline constexpr ydk::IFileLogger<WCHAR>* Logger() const { return m_Logger; }
+	inline constexpr UINT GetMainDialogID() const override { return IDD_MAINDLG; }
+	bool OnInitialize() override;
+	void OnShutdown() override;
+	INT_PTR OnInitDialog(HWND hDlg) override;
+	INT_PTR OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) override;
+	INT_PTR OnClose(HWND hDlg) override;
+	INT_PTR HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) override;
+
 	void LoadBlockList();
 	void LoadSetting();
 	void SaveSetting();
