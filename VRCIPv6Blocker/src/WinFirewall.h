@@ -10,7 +10,8 @@ namespace ydk {
 			LPCWSTR ruleName,
 			const std::vector<std::wstring>& remoteAddresses,
 			HRESULT* hResult = nullptr,
-			LPCWSTR lpDescription = L""
+			LPCWSTR lpDescription = L"",
+			LPCWSTR appExePath = nullptr
 	);
 	bool RemoveFirewallRule(LPCWSTR ruleName, HRESULT* hResult = nullptr);
 }
