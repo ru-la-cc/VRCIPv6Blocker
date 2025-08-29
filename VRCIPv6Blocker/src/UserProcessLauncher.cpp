@@ -8,7 +8,6 @@
 #include <tlhelp32.h>
 #include <cwctype>
 #include <array>
-#include <string>
 #include <algorithm>
 #include <memory>
 
@@ -416,52 +415,85 @@ namespace ydk {
 	}
 
 
-	// ---- 本体・・・実際に起動する時に呼ぶのはこいつだけ ----
+	// ---- 本体・・・実際に外部から呼ぶのはここ以降の関数 ----
+	// .lnkからexeのパスを取得するなど
+	bool GetExecutableFromLnk(
+		const std::wstring& lnkPath,
+		std::wstring& exe,
+		std::wstring& args,
+		std::wstring& workDir,
+		int& showCmd)
+	{
+		std::wstring targetPath;
+		if (!resolve_lnk(lnkPath, targetPath, args, workDir, showCmd)) {
+			return false;
+		}
+
+		DWORD attrs = ::GetFileAttributesW(targetPath.c_str());
+		if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+			::SetLastError(ERROR_FILE_NOT_FOUND);
+			return false;
+		}
+		exe = std::move(targetPath);
+		return true;
+	}
+
+	// .urlからexeのパスを取得するなど
+	UrlResolveMode GetExecutableFromUrlFile(
+		const std::wstring& urlFile,
+		std::wstring& url,
+		std::wstring& exe,
+		std::wstring& fullCmd,
+		std::wstring& workDir,
+		int& showCmd)
+	{
+		showCmd = SW_SHOWNORMAL;
+		url.clear(); exe.clear(); fullCmd.clear(); workDir.clear();
+
+		if (!read_url_from_urlfile(urlFile, url)) {
+			return UrlResolveMode::Unresolvable;
+		}
+
+		if (ResolveProtocolCommand(url, exe, fullCmd, workDir)) {
+			return UrlResolveMode::CommandLine;
+		}
+
+		return UrlResolveMode::DelegateToShell;
+	}
+
 	// 戻り値: 起動したプロセスの PID（取得不能/既存委譲時は 0）。失敗時 0。
 	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath, bool isComInitialize)
 	{
-		// 入力検証（.lnk / .url 自体の存在もここでチェック）
 		if (!ValidateInputPath(lpExePath)) return 0;
 
-		// COM: 関数冒頭で一度だけ
 		auto com = isComInitialize ? std::make_unique<ComInitializer>() : nullptr;
 
-		// 必要特権の明示有効化
 		EnablePrivilege(SE_INCREASE_QUOTA_NAME);
 		EnablePrivilege(SE_ASSIGNPRIMARYTOKEN_NAME);
 		EnablePrivilege(SE_IMPERSONATE_NAME);
 
-		// 正規化（外側の引用符を除去）と拡張子
 		std::wstring src = TrimSurroundingQuotes(lpExePath);
 		std::wstring ext = ext_of(src);
 
-		// ログインユーザーのプライマリトークン
 		auto hUserPrimary = primary_token_of_shell_user();
 		if (!hUserPrimary) { SetLastError(ERROR_NO_TOKEN); return 0; }
 
-		// 解析結果
 		std::wstring targetPath, args, workDir;
 		std::wstring url;
 		int showCmd = SW_SHOWNORMAL;
 
 		if (ext == L".lnk") {
-			// .lnk → 実体・引数・作業Dir・ShowCmd を解決
-			if (!resolve_lnk(src, targetPath, args, workDir, showCmd)) return 0;
+			if (!GetExecutableFromLnk(src, targetPath, args, workDir, showCmd)) return 0;
 			ext = ext_of(targetPath);
-			// 実体の存在確認（壊れたショートカット対策）※Validate は .lnk 自体の存在を見ただけ
-			DWORD attrs = GetFileAttributesW(targetPath.c_str());
-			if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY)) { SetLastError(ERROR_FILE_NOT_FOUND); return 0; }
 		}
 		else if (ext == L".url") {
-			// if (!read_url_from_urlfile(src, url)) return 0;
-			// std::wstring exe = associated_exe_for_scheme(url);
-			// workDir = exe.empty() ? L"" : dirname_of(exe);
-			// showCmd = SW_SHOWNORMAL（ハンドラ任せ）
-			if (!read_url_from_urlfile(src, url)) return 0;
-			// --- ここから差し替え：スキーム解決 → 直接起動 ---
-			std::wstring exe, fullCmd, workDir;
-			if (ResolveProtocolCommand(url, exe, fullCmd, workDir)) {
-				// 解析できた → CreateProcessWithTokenW でユーザー権限として起動
+			std::wstring exe, fullCmd, urlWorkDir;
+			UrlResolveMode mode = GetExecutableFromUrlFile(src, url, exe, fullCmd, urlWorkDir, showCmd);
+			if (mode == UrlResolveMode::Unresolvable) {
+				return 0; // エラー扱い（既存の read_url_from_urlfile 失敗と同等）
+			}
+
+			if (mode == UrlResolveMode::CommandLine) {
 				void* envBlockRaw = nullptr;
 				CreateEnvironmentBlock(&envBlockRaw, hUserPrimary.get(), FALSE);
 				unique_env envBlock(envBlockRaw);
@@ -470,25 +502,26 @@ namespace ydk {
 				si.lpDesktop = const_cast<LPWSTR>(L"winsta0\\default");
 				si.dwFlags |= STARTF_USESHOWWINDOW;
 				si.wShowWindow = (WORD)showCmd;
+
 				PROCESS_INFORMATION pi{};
-				std::wstring mutableCmd = fullCmd; // 可変バッファ
+				std::wstring mutableCmd = fullCmd;
+
 				BOOL ok = CreateProcessWithTokenW(
 					hUserPrimary.get(), LOGON_WITH_PROFILE,
 					nullptr, mutableCmd.data(),
 					CREATE_UNICODE_ENVIRONMENT,
 					envBlock.get(),
-					workDir.empty() ? nullptr : workDir.c_str(),
+					urlWorkDir.empty() ? nullptr : urlWorkDir.c_str(),
 					&si, &pi);
 
 				if (!ok) {
-					// 失敗時は CreateProcessAsUserW へフォールバック
 					ok = CreateProcessAsUserW(
 						hUserPrimary.get(),
 						nullptr, mutableCmd.data(),
 						nullptr, nullptr, FALSE,
 						CREATE_UNICODE_ENVIRONMENT,
 						envBlock.get(),
-						workDir.empty() ? nullptr : workDir.c_str(),
+						urlWorkDir.empty() ? nullptr : urlWorkDir.c_str(),
 						&si, &pi);
 				}
 				if (!ok) { SetErrorOrDefault(ERROR_ACCESS_DENIED); return 0; }
@@ -499,7 +532,6 @@ namespace ydk {
 				return pid;
 			}
 			else {
-				// 解決できない（AppX 等）→ ユーザー権限で cmd.exe 経由の 'start' フォールバック
 				DWORD pid = 0;
 				if (!StartUrlViaCmdFallback(hUserPrimary.get(), url, showCmd, pid)) return 0;
 				return pid;
@@ -510,12 +542,10 @@ namespace ydk {
 			workDir = dirname_of(targetPath);
 		}
 
-		// --- ShellExecute 経由が望ましい種類（ダブルクリック踏襲） ---
 		auto needShellExec = [](const std::wstring& e)->bool {
-			return (e == L".bat" || e == L".cmd" || e == L".msi" || e == L".url"); // .url は別分岐だが便宜で含む
+			return (e == L".bat" || e == L".cmd" || e == L".msi" || e == L".url");
 			};
 
-		// --- URL（既定ハンドラへ委譲） ---
 		if (!url.empty()) {
 			DWORD pid = 0;
 			if (!ShellExecuteAsUser(hUserPrimary.get(), url.c_str(), nullptr,
@@ -523,10 +553,9 @@ namespace ydk {
 				showCmd, pid)) {
 				return 0;
 			}
-			return pid; // 既存インスタンス委譲時は 0 のままになり得る
+			return pid;
 		}
 
-		// --- .bat/.cmd/.msi は ShellExecuteEx（関連付け） ---
 		if (needShellExec(ext)) {
 			DWORD pid = 0;
 			if (!ShellExecuteAsUser(hUserPrimary.get(),
@@ -539,7 +568,6 @@ namespace ydk {
 			return pid;
 		}
 
-		// --- .exe/.com/.scr は CreateProcessWithTokenW で直接起動 ---
 		void* envBlockRaw = nullptr;
 		if (!CreateEnvironmentBlock(&envBlockRaw, hUserPrimary.get(), FALSE)) envBlockRaw = nullptr;
 		unique_env envBlock(envBlockRaw);
@@ -550,7 +578,7 @@ namespace ydk {
 
 		PROCESS_INFORMATION pi{};
 		const std::wstring cmdLine = BuildCommandLine(targetPath, args);
-		std::wstring cmdMutable = cmdLine; // 可変バッファ
+		std::wstring cmdMutable = cmdLine;
 
 		DWORD logonFlags = LOGON_WITH_PROFILE;
 		DWORD creationFlags = CREATE_UNICODE_ENVIRONMENT;
@@ -582,5 +610,4 @@ namespace ydk {
 		if (pi.hProcess) CloseHandle(pi.hProcess);
 		return pid;
 	}
-
-} // namespace detail
+}
