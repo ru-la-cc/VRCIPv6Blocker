@@ -179,10 +179,12 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 }
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
-	if (GetStopFlag()) {
-		SetStopFlag(true);
+	if (!GetStopFlag()) SetStopFlag(true);
+	if (m_hMonThread != nullptr) {
 		// 一応スレッド終了待ち
-		::Sleep(PROCESS_MONITOR_INTERVAL);
+		::WaitForSingleObject(m_hMonThread, INFINITE);
+		::CloseHandle(m_hMonThread);
+		m_hMonThread = nullptr;
 	}
 	if(m_isAutoRun) AutoExit();
     return ydk::DialogAppBase::OnClose(hDlg);
@@ -208,6 +210,7 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 			m_Logger->Log(szLog);
 		}
 		if (m_hWaitThread != nullptr) {
+			::WaitForSingleObject(m_hWaitThread, INFINITE);
 			::CloseHandle(m_hWaitThread);
 			m_hWaitThread = nullptr;
 		}
@@ -286,7 +289,7 @@ unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
 			::Sleep(app->PROCESS_MONITOR_INTERVAL);
 		}
 	}
-	::_endthreadex(0);
+	app->m_Logger->Log(L"VRChatのプロセス監視スレッドを終了します");
 	return 0;
 }
 
@@ -334,7 +337,7 @@ unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
 	if (!app->m_isAutoRun) {
 		::PostMessageW(app->m_hWnd, WM_ENABLE_CONTROL, static_cast<WPARAM>(TRUE), static_cast<LPARAM>(IDC_BUTTON_SAVE));
 	}
-	::_endthreadex(0);
+	app->m_Logger->Log(L"VRChatの待機スレッドを終了します");
 	return 0;
 }
 
