@@ -13,6 +13,7 @@
 class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
 	struct INI_SETTING {
+		unsigned __int64 ullVersion;
 		UINT uRunVRC;
 		UINT uAutoShutdown;
 		UINT uMinWindow;
@@ -27,7 +28,7 @@ public:
 		std::wstring strVRCFullPath;
 	};
 
-	virtual ~VRCIPv6BlockerApp();
+	~VRCIPv6BlockerApp();
 	static VRCIPv6BlockerApp* Instance();
 private:
 	std::vector<std::wstring> m_BlockList;
@@ -42,11 +43,13 @@ private:
 	ydk::AdapterKey m_adapterKey = {};
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	LPWSTR* m_lpArgList;
+	unsigned __int64 m_Version;
 
 	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
 	LPCWSTR VRCFILENAME = L"VRChat.exe";
 	static constexpr LPCWSTR REGISTER_NAME = APP_GUID L"_" APP_NAME;
 	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
+	LPCWSTR IK_VERSION = L"Version";
 	LPCWSTR IK_RUNVRC = L"RunVRC";
 	LPCWSTR IK_AUTOSHUTDOWN = L"AutoShutdown";
 	LPCWSTR IK_MINWINDOW = L"MinWindow";
@@ -73,6 +76,7 @@ private:
 	static inline constexpr UINT WM_ENABLE_CONTROL = WM_APP + 5;
 	int m_argc;
 	bool m_isAutoRun = false;
+	bool m_isVRCExecuted = false;
 	bool m_isStop = false;
 	bool m_isFirewallBlocked = false;
 	bool m_isIPv6Enabled = true;
@@ -94,7 +98,7 @@ private:
 
 	void LoadBlockList();
 	void LoadSetting();
-	void SaveSetting();
+	bool SaveSetting();
 	void GetSetting();
 	void SetSetting();
 	void DumpSetting();
