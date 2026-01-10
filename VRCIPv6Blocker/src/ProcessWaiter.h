@@ -4,7 +4,7 @@
 namespace ydk {
 	class ProcessWaiter final {
 	public:
-		ProcessWaiter(DWORD dwProcessId) noexcept {
+		ProcessWaiter(DWORD dwProcessId) {
 			m_hProcess = ::OpenProcess(
 				SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
 				FALSE,
