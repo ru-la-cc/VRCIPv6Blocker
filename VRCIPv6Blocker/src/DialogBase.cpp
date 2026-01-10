@@ -137,6 +137,7 @@ namespace ydk {
             // 初期化時はlParamからインスタンスを取得
             pThis = reinterpret_cast<DialogAppBase*>(lParam);
             if (pThis) {
+				pThis->m_hWnd = hDlg;
                 SetWindowLongPtr(hDlg, DWLP_USER, reinterpret_cast<LONG_PTR>(pThis));
                 return pThis->OnInitDialog(hDlg);
             }
@@ -164,7 +165,7 @@ namespace ydk {
 
     INT_PTR DialogAppBase::OnInitDialog(HWND hDlg) {
         // ウィンドウアイコン設定（必要に応じて）
-		m_hWnd = hDlg;
+		// m_hWnd = hDlg;
         HICON hIcon = LoadIcon(m_hInstance, IDI_APPLICATION);
         if (hIcon) {
             SendMessage(hDlg, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
