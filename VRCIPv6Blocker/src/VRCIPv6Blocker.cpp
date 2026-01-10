@@ -13,6 +13,7 @@
 #include <tlhelp32.h>
 #include <process.h>
 #include <pathcch.h>
+#include <cerrno>
 
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Comdlg32.lib")
@@ -46,6 +47,10 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
 	WORD v1, v2, v3, v4;
 	ydk::GetAppVersion(&v1, &v2, &v3, &v4);
+	m_Version = (static_cast<unsigned __int64>(v1) << 48) |
+		(static_cast<unsigned __int64>(v2) << 32) |
+		(static_cast<unsigned __int64>(v3) << 16) |
+		(static_cast<unsigned __int64>(v4) << 0);
 	WCHAR szVer[64];
 	::swprintf_s(szVer, L"Ver. %u.%u.%u(%u)", v1, v2, v3, v4);
 	::SetDlgItemTextW(m_hWnd, IDC_STATIC_VERSION, szVer);
@@ -171,14 +176,23 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 
 	case IDC_BUTTON_SAVE:
 		GetSetting();
-		SaveSetting();
-		::MessageBoxW(m_hWnd, L"設定を保存しました", L"通知", MB_ICONINFORMATION | MB_OK);
+		if(SaveSetting()) ::MessageBoxW(m_hWnd, L"設定を保存しました", L"通知", MB_ICONINFORMATION | MB_OK);
+		else ::MessageBoxW(m_hWnd, L"設定の保存でエラーが発生しました", L"ばかな...", MB_ICONERROR | MB_OK);
 		return TRUE;
     }
 	return ydk::DialogAppBase::OnCommand(hDlg, wParam, lParam);
 }
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
+	if (m_isAutoRun && (m_isVRCExecuted || m_hWaitThread != nullptr)) {
+		// VRChat起動中なのに閉じようとしたら一応警告を出す
+		if (::MessageBoxW(m_hWnd,
+			L"VRChatが起動中です！\n"
+			L"このアプリを終了するとIPv6の設定が元に戻り、一時的に通信が切れる場合があります\n"
+			L"それでもいいですか？",
+			L"警告",
+			MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES) return TRUE;
+	}
 	if (!GetStopFlag()) SetStopFlag(true);
 	if (m_hMonThread != nullptr) {
 		// 一応スレッド終了待ち
@@ -308,6 +322,7 @@ unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
 	if (!pw.IsValid()) {
 		app->m_Logger->LogError(L"VRChatのプロセスハンドル開けてないんだが？");
 	}
+	app->m_isVRCExecuted = false;
 	WCHAR szResult[128];
 	::swprintf_s(szResult, L"wait result = 0x%08X(%lu)", result, result);
 	app->m_Logger->Log(szResult);
@@ -349,6 +364,7 @@ VRCIPv6BlockerApp* VRCIPv6BlockerApp::Instance() {
 VRCIPv6BlockerApp::VRCIPv6BlockerApp()
     : ydk::DialogAppBase() {
     // コンストラクタ
+	m_Version = 0;
     m_ModulePath = ydk::GetModuleDir();
 	m_IniFile = m_ModulePath;
 	m_IniFile += APP_NAME;
@@ -456,6 +472,10 @@ void VRCIPv6BlockerApp::LoadSetting() {
 	m_Setting.uRevert = ::GetPrivateProfileIntW(APP_NAME, IK_REVERT, BST_UNCHECKED, m_IniFile.c_str());
 	m_Setting.uOnlyVRC = ::GetPrivateProfileIntW(APP_NAME, IK_ONLYVRC, BST_UNCHECKED, m_IniFile.c_str());
 	WCHAR szBuf[MAX_PATH];
+	::GetPrivateProfileStringW(APP_NAME, IK_VERSION, L"0", szBuf, std::size(szBuf), m_IniFile.c_str());
+	LPWSTR lpEnd;
+	m_Setting.ullVersion = std::wcstoull(szBuf, &lpEnd, 10);
+	if (*lpEnd || errno == ERANGE || !m_Setting.ullVersion) m_Setting.ullVersion = m_Version;
 	::GetPrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, L"", szBuf, std::size(szBuf), m_IniFile.c_str());
 	m_Setting.strExecutePath = szBuf;
 	::GetPrivateProfileStringW(APP_NAME, IK_VRCFILE, VRCFILENAME, szBuf, std::size(szBuf), m_IniFile.c_str());
@@ -471,30 +491,38 @@ void VRCIPv6BlockerApp::LoadSetting() {
 }
 
 // 設定情報の書込
-void VRCIPv6BlockerApp::SaveSetting() {
+bool VRCIPv6BlockerApp::SaveSetting() {
 	WCHAR szFormat[64];
+	bool isSuccess = true;
+	if (m_Setting.ullVersion < m_Version) {
+		m_Setting.ullVersion = m_Version;
+	}
+	::StringCchPrintfW(szFormat, std::size(szFormat), L"%llu", m_Version);
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_VERSION, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uRunVRC);
-	::WritePrivateProfileStringW(APP_NAME, IK_RUNVRC, szFormat, m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_RUNVRC, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uAutoShutdown);
-	::WritePrivateProfileStringW(APP_NAME, IK_AUTOSHUTDOWN, szFormat, m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_AUTOSHUTDOWN, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uMinWindow);
-	::WritePrivateProfileStringW(APP_NAME, IK_MINWINDOW, szFormat, m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_MINWINDOW, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uFirewallBlock);
-	::WritePrivateProfileStringW(APP_NAME, IK_FIREWALLBLOCK, szFormat, m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_FIREWALLBLOCK, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uNonBlocking);
-	::WritePrivateProfileStringW(APP_NAME, IK_NONBLOCKING, szFormat, m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_NONBLOCKING, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uRevert);
-	::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szFormat, m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szFormat, m_IniFile.c_str());
 	::StringCchPrintfW(szFormat, std::size(szFormat), L"%u", m_Setting.uOnlyVRC);
-	::WritePrivateProfileStringW(APP_NAME, IK_ONLYVRC, szFormat, m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_ONLYVRC, szFormat, m_IniFile.c_str());
 
-	::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), m_IniFile.c_str());
-	::WritePrivateProfileStringW(APP_NAME, IK_VRCFILE, m_Setting.strVRCFile.c_str(), m_IniFile.c_str());
-	::WritePrivateProfileStringW(APP_NAME, IK_DESTIP, m_Setting.strDestIp.c_str(), m_IniFile.c_str());
-	::WritePrivateProfileStringW(APP_NAME, IK_NIC, m_Setting.strNIC.c_str(), m_IniFile.c_str());
-	::WritePrivateProfileStringW(APP_NAME, IK_VRCFULLPATH, m_Setting.strVRCFullPath.c_str(), m_IniFile.c_str());
-	m_Logger->Log(L"設定を書込みました");
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_EXECUTEPATH, m_Setting.strExecutePath.c_str(), m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_VRCFILE, m_Setting.strVRCFile.c_str(), m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_DESTIP, m_Setting.strDestIp.c_str(), m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_NIC, m_Setting.strNIC.c_str(), m_IniFile.c_str());
+	isSuccess = isSuccess && ::WritePrivateProfileStringW(APP_NAME, IK_VRCFULLPATH, m_Setting.strVRCFullPath.c_str(), m_IniFile.c_str());
+	if(isSuccess) m_Logger->Log(L"設定を書込みました");
+	else m_Logger->LogError(L"設定の書込みに失敗しました");
 	DumpSetting();
+	return isSuccess;
 }
 
 void VRCIPv6BlockerApp::GetSetting() {
@@ -521,7 +549,8 @@ void VRCIPv6BlockerApp::DumpSetting() {
 	WCHAR szLog[384];
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
-		L"Setting : uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u), uRevert(%u), uOnlyVRC(%u)",
+		L"Setting : Ver(%llu), uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u), uRevert(%u), uOnlyVRC(%u)",
+		m_Setting.ullVersion,
 		m_Setting.uRunVRC,
 		m_Setting.uAutoShutdown,
 		m_Setting.uMinWindow,
@@ -627,6 +656,7 @@ void VRCIPv6BlockerApp::VRCExecuter() {
 	}
 	else {
 		WCHAR szMsg[256];
+		m_isVRCExecuted = true;
 		::swprintf_s(szMsg, L"プロセスID(%lu)で起動しました(ランチャーの可能性もあるからこのPIDは信用できん)", pid);
 		m_Logger->Log(szMsg);
 		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatの起動待ち...");
@@ -768,8 +798,12 @@ void VRCIPv6BlockerApp::WriteGuid(LPCWSTR lpGuid) {
 	if(lpGuid == nullptr || m_Setting.uFirewallBlock == BST_CHECKED) m_Setting.uRevert = BST_UNCHECKED;
 	WCHAR szChk[32];
 	::swprintf_s(szChk, L"%u", m_Setting.uRevert);
-	::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szChk, m_IniFile.c_str());
-	::WritePrivateProfileStringW(APP_NAME, IK_NIC, lpGuid, m_IniFile.c_str());
+	if(!::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szChk, m_IniFile.c_str())) {
+		m_Logger->LogError(L"IPv6設定書込みに失敗しました");
+	}
+	if(!::WritePrivateProfileStringW(APP_NAME, IK_NIC, lpGuid, m_IniFile.c_str())){
+		m_Logger->LogError(L"ネットワークアダプタ情報の書込みに失敗しました");
+	}
 }
 
 void VRCIPv6BlockerApp::CheckIPv6Setting() {
