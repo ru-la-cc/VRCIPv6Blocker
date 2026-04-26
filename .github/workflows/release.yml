@@ -30,6 +30,7 @@ jobs:
           New-Item -ItemType Directory -Path _package/VRCIPv6Blocker
           Copy-Item x64/Release/VRCIPv6Blocker.exe _package/VRCIPv6Blocker/
           Copy-Item docs/assets/user-guide.pdf _package/VRCIPv6Blocker/
+          Copy-Item docs/assets/readme.txt _package/VRCIPv6Blocker/
           Compress-Archive -Path _package/VRCIPv6Blocker -DestinationPath "VRCIPv6Blocker_${{ github.ref_name }}.zip"
 
       - name: Upload artifact
