@@ -18,7 +18,6 @@ namespace ydk {
 			m_Error = 0;
 		}
 
-		// こんなんコピーやムーブするかぁ...?
 		AppMutex(const AppMutex&) = delete;
 		AppMutex& operator=(const AppMutex&) = delete;
 		AppMutex(AppMutex&&) = delete;
