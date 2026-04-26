@@ -1,5 +1,4 @@
-﻿// winapiはincludeの順序気にしないといけないの大杉なんだよ...
-#include "ipv6conf.h"
+﻿#include "ipv6conf.h"
 #include "WinFirewall.h"
 #include "taskman.h"
 #include "VRCIPv6Blocker.h"
@@ -45,6 +44,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
     // まぁこのあたりに初期化処理を書く予定
 	m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
 	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
+	m_pLockFile = std::make_unique<ydk::LockFile>((m_ModulePath + INPRG_FILE).c_str());
 	WORD v1, v2, v3, v4;
 	ydk::GetAppVersion(&v1, &v2, &v3, &v4);
 	m_Version = (static_cast<unsigned __int64>(v1) << 48) |
@@ -93,6 +93,16 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 			L"VRChatの監視スレッドが起動できませんでした\nたぶん役に立たないので閉じてください",
 			L"エラー",
 			MB_ICONERROR | MB_OK);
+	}
+
+	if (m_pLockFile->IsExist()) {
+		if (::MessageBoxW(m_hWnd,
+			L"前回、異常終了でブロックの解除が行われていない可能性があります。\n"
+			L"ブロックの解除を行いますか？",
+			L"警告",
+			MB_ICONWARNING | MB_YESNO) == IDYES) {
+			RevertBlock();
+		}
 	}
 
 	// 自動実行の場合は
@@ -618,6 +628,36 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_SAVE), !m_isAutoRun);
 }
 
+void VRCIPv6BlockerApp::RevertBlock() {
+	LOCK_INFO lockInfo = {};
+	if (!m_pLockFile->GetLockInfo(reinterpret_cast<LPBYTE>(&lockInfo), sizeof(lockInfo))) {
+		m_Logger->LogError(L"ブロック情報の読込に失敗");
+		::MessageBoxW(m_hWnd, L"ブロック情報の読込に失敗しました", L"エラー", MB_ICONERROR | MB_OK);
+		return;
+	}
+	if (lockInfo.kind == LOCK_KIND::FW && lockInfo.change == LOCK_CHANGE::Changed) {
+		if (m_isFirewallBlocked) {
+			RemoveFirewall();
+			if (m_isFirewallBlocked) {
+				::MessageBoxW(m_hWnd, L"ファイアウォールのブロック情報を削除できませんでした", L"エラー", MB_ICONERROR | MB_OK);
+				return;
+			}
+		}
+	}
+	else if (lockInfo.kind == LOCK_KIND::Adapter && lockInfo.change == LOCK_CHANGE::Changed) {
+		m_adapterKey.ifIndex = lockInfo.ifIndex;
+		m_adapterKey.ifGuid = lockInfo.adapterGuid;
+		if (!SetIPv6(true)) {
+			m_Logger->LogError(L"アダプタのIPv6の有効化に失敗");
+			::MessageBoxW(m_hWnd, L"IPv6の有効化に失敗しました\n[Win]+Rでncpa.cplを実行し、手動で有効にしてください", L"エラー", MB_ICONERROR | MB_OK);
+			return;
+		}
+		m_Setting.uRevert = BST_CHECKED;
+		WriteGuid(SerializeGuid(m_adapterKey.ifGuid).c_str());
+	}
+	m_pLockFile->Unlock();
+}
+
 DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
 	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hSnapshot == INVALID_HANDLE_VALUE) {
@@ -831,38 +871,45 @@ void VRCIPv6BlockerApp::CheckIPv6Setting() {
 	}
 }
 
-void VRCIPv6BlockerApp::ChangeFireWall() {
+bool VRCIPv6BlockerApp::ChangeFireWall() {
 	if (m_isFirewallBlocked) {
 		RemoveFirewall();
 		if (m_isFirewallBlocked) {
 			::MessageBoxW(m_hWnd, L"ルールは削除されませんでした", L"警告", MB_ICONWARNING | MB_OK);
+			return false;
 		}
 		else if(!m_isAutoRun) {
 			::MessageBoxW(m_hWnd, L"ルールを削除しました", L"通知", MB_ICONINFORMATION | MB_OK);
 		}
+		return true;
 	}
 	else {
 		SetFirewall();
 		if (m_isFirewallBlocked) {
 			if(!m_isAutoRun) ::MessageBoxW(m_hWnd, L"ルールを登録しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			return true;
 		}
 		else {
 			::MessageBoxW(m_hWnd, L"ルールが登録できませんでした", L"エラー", MB_ICONERROR | MB_OK);
+			return false;
 		}
 	}
 }
 
-void VRCIPv6BlockerApp::ChangeIPv6() {
+bool VRCIPv6BlockerApp::ChangeIPv6() {
 	if (SetIPv6(!m_isIPv6Enabled)) {
 		if (m_isIPv6Enabled) {
 			if (!m_isAutoRun) ::MessageBoxW(m_hWnd, L"IPv6を有効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			return true;
 		}
 		else {
 			if (!m_isAutoRun) ::MessageBoxW(m_hWnd, L"IPv6を無効化しました", L"通知", MB_ICONINFORMATION | MB_OK);
+			return true;
 		}
 	}
 	else {
 		::MessageBoxW(m_hWnd, L"IPv6の設定変更ができませんでした", L"エラー", MB_ICONERROR | MB_OK);
+		return false;
 	}
 }
 
@@ -870,8 +917,12 @@ void VRCIPv6BlockerApp::AutoStart() {
 	if (m_Setting.uNonBlocking == BST_UNCHECKED) {
 		if (m_Setting.uFirewallBlock == BST_CHECKED) {
 			// ファイアウォールにブロックを追加する場合
+			m_LockInfo.kind = LOCK_KIND::FW;
+			m_LockInfo.change = LOCK_CHANGE::None;
 			if (!m_isFirewallBlocked) {
-				ChangeFireWall();
+				if (ChangeFireWall()) {
+					m_LockInfo.change = LOCK_CHANGE::Changed;
+				}
 			}
 			else {
 				m_Logger->LogWarning(L"ファイアウォール登録済みのためスキップします");
@@ -879,12 +930,22 @@ void VRCIPv6BlockerApp::AutoStart() {
 		}
 		else {
 			// IPv6無効化の場合
+			m_LockInfo.kind = LOCK_KIND::Adapter;
+			m_LockInfo.change = LOCK_CHANGE::None;
 			if (m_isIPv6Enabled) {
-				ChangeIPv6();
+				if (ChangeIPv6()) {
+					m_LockInfo.change = LOCK_CHANGE::Changed;
+					m_LockInfo.ifIndex = m_adapterKey.ifIndex;
+					m_LockInfo.adapterGuid = m_adapterKey.ifGuid;
+				}
 			}
 			else {
 				m_Logger->LogWarning(L"IPv6は無効のためスキップします");
 			}
+		}
+		if (!m_pLockFile->Lock(reinterpret_cast<LPCBYTE>(&m_LockInfo), sizeof(m_LockInfo))) {
+			m_Logger->LogError(L"ロックファイルの作成に失敗");
+			m_Logger->LogError(ydk::GetErrorMessage(m_pLockFile->GetError()).c_str());
 		}
 	}
 
@@ -903,7 +964,7 @@ void VRCIPv6BlockerApp::AutoExit() {
 		if (m_Setting.uFirewallBlock == BST_CHECKED) {
 			// ファイアウォールのブロックを解除する場合
 			if (m_isFirewallBlocked) {
-				ChangeFireWall();
+				if (!ChangeFireWall()) return;
 			}
 			else {
 				m_Logger->LogWarning(L"ファイアウォールに登録されていません");
@@ -912,11 +973,21 @@ void VRCIPv6BlockerApp::AutoExit() {
 		else {
 			// IPv6有効化の場合（もともと無効だったら無効のまま）
 			if (!m_isIPv6Enabled) {
-				if (m_Setting.uRevert == BST_CHECKED) ChangeIPv6();
-				else m_Logger->Log(L"IPv6はもともと無効かエラーだったためスキップします");
+				if (m_Setting.uRevert == BST_CHECKED) {
+					if(!ChangeIPv6())return;
+				}
+				else {
+					m_Logger->Log(L"IPv6はもともと無効かエラーだったためスキップします");
+				}
 			}
 			else {
 				m_Logger->LogWarning(L"IPv6は有効のためスキップします");
+			}
+		}
+		if (m_pLockFile->IsLocked()) {
+			if (!m_pLockFile->Unlock()) {
+				m_Logger->LogError(L"ロックファイルの削除に失敗");
+				m_Logger->LogError(ydk::GetErrorMessage(m_pLockFile->GetError()).c_str());
 			}
 		}
 	}
