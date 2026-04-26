@@ -4,6 +4,7 @@
 #include "FileLogger.h"
 #include "ISubclass.h"
 #include "ComInitializer.h"
+#include "lockfile.h"
 #include <vector>
 #include "../resource.h"
 
@@ -28,24 +29,42 @@ public:
 		std::wstring strVRCFullPath;
 	};
 
+	enum class LOCK_KIND : WORD {
+		FW = 1,
+		Adapter = 2
+	};
+	enum class LOCK_CHANGE : WORD {
+		None = 0,
+		Changed = 1
+	};
+	struct LOCK_INFO {
+		LOCK_KIND kind;
+		LOCK_CHANGE change;
+		ULONG ifIndex;
+		GUID adapterGuid;
+	};
+
 	~VRCIPv6BlockerApp();
 	static VRCIPv6BlockerApp* Instance();
 private:
 	std::vector<std::wstring> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_IniFile;
+	LOCK_INFO m_LockInfo = {};
 	INI_SETTING m_Setting = {};
 	ydk::ComInitializer m_comInitializer;
 	CRITICAL_SECTION m_tCs;
 	CRITICAL_SECTION m_tidCs;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
+	std::unique_ptr<ydk::LockFile> m_pLockFile;
 	ydk::AdapterKey m_adapterKey = {};
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	LPWSTR* m_lpArgList;
 	unsigned __int64 m_Version;
 
 	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
+	LPCWSTR INPRG_FILE = L"ipv6unblock.incomplete";
 	LPCWSTR VRCFILENAME = L"VRChat.exe";
 	static constexpr LPCWSTR REGISTER_NAME = APP_GUID L"_" APP_NAME;
 	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
@@ -103,6 +122,7 @@ private:
 	void SetSetting();
 	void DumpSetting();
 	void CheckDialogControl();
+	void RevertBlock();
 	[[nodiscard]] DWORD GetVRChatProcess();
 	void VRCExecuter();
 	void SetStopFlag(bool isStop);
@@ -117,8 +137,8 @@ private:
 	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid);
 	void WriteGuid(LPCWSTR lpGuid);
 	void CheckIPv6Setting();
-	void ChangeFireWall();
-	void ChangeIPv6();
+	bool ChangeFireWall();
+	bool ChangeIPv6();
 	void AutoStart();
 	void AutoExit();
 	bool CreateShortcut();
