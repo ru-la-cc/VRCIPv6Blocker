@@ -1,5 +1,4 @@
-﻿#pragma once
-#include "WinFirewall.h"
+﻿#include "WinFirewall.h"
 #include <atlbase.h>
 #include <netfw.h>
 #include <sstream>

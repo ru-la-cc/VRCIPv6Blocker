@@ -34,7 +34,6 @@ namespace ydk {
 
 	int ToUtf8(LPCWSTR lpUtf16, LPSTR lpUtf8, int buflen) {
 		if (lpUtf8 != nullptr && buflen < 1) {
-			lpUtf8[0] = '\0';
 			return 0;
 		}
 
@@ -45,7 +44,6 @@ namespace ydk {
 
 	int ToUtf16(LPCSTR lpUtf8, LPWSTR lpUtf16, int buflen) {
 		if (lpUtf16 != nullptr && buflen < 1) {
-			lpUtf16[0] = L'\0';
 			return 0;
 		}
 		int result = ::MultiByteToWideChar(CP_UTF8, 0, lpUtf8, -1, lpUtf16, buflen);
@@ -317,7 +315,7 @@ namespace ydk {
 	}
 
 	bool GetKnownFolderPath(std::wstring& path, KNOWNFOLDERID folderId) {
-		PWSTR pPath;
+		PWSTR pPath = nullptr;
 
 		HRESULT hr = ::SHGetKnownFolderPath(
 			folderId,
