@@ -175,7 +175,7 @@ namespace ydk {
         return TRUE;
     }
 
-    INT_PTR DialogAppBase::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
+    INT_PTR DialogAppBase::OnCommand(HWND hDlg, WPARAM wParam, [[maybe_unused]] LPARAM lParam) {
         switch (LOWORD(wParam)) {
         case IDOK:
         case IDCANCEL:
@@ -190,13 +190,13 @@ namespace ydk {
         return TRUE;
     }
 
-    INT_PTR DialogAppBase::OnDestroy(HWND hDlg) {
+    INT_PTR DialogAppBase::OnDestroy([[maybe_unused]] HWND hDlg) {
         PostQuitMessage(0);
         return TRUE;
     }
 
-    INT_PTR DialogAppBase::HandleMessage(HWND hDlg, UINT message,
-        WPARAM wParam, LPARAM lParam) {
+    INT_PTR DialogAppBase::HandleMessage([[maybe_unused]] HWND hDlg, [[maybe_unused]] UINT message,
+		[[maybe_unused]] WPARAM wParam, [[maybe_unused]] LPARAM lParam) {
         return FALSE;
     }
 
@@ -266,7 +266,7 @@ namespace ydk {
         return TRUE;
     }
 
-    INT_PTR ModalDialogBase::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
+    INT_PTR ModalDialogBase::OnCommand(HWND hDlg, WPARAM wParam, [[maybe_unused]] LPARAM lParam) {
         switch (LOWORD(wParam)) {
         case IDOK:
             EndDialog(hDlg, IDOK);
@@ -278,8 +278,8 @@ namespace ydk {
         return FALSE;
     }
 
-    INT_PTR ModalDialogBase::HandleMessage(HWND hDlg, UINT message,
-        WPARAM wParam, LPARAM lParam) {
+    INT_PTR ModalDialogBase::HandleMessage([[maybe_unused]] HWND hDlg, [[maybe_unused]] UINT message,
+		[[maybe_unused]] WPARAM wParam, [[maybe_unused]] LPARAM lParam) {
         return FALSE;
     }
 }

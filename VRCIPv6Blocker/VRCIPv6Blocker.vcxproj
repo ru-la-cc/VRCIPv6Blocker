@@ -98,7 +98,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
@@ -116,7 +116,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -138,6 +138,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\AppMutex.h" />
     <ClInclude Include="src\ComInitializer.h" />
+    <ClInclude Include="src\config.h" />
     <ClInclude Include="src\DialogBase.h" />
     <ClInclude Include="src\FileLogger.h" />
     <ClInclude Include="src\ILogger.h" />
@@ -149,6 +150,7 @@
     <ClInclude Include="src\ProcessWaiter.h" />
     <ClInclude Include="src\SubclassEditHandler.h" />
     <ClInclude Include="src\VRCIPv6Blocker.h" />
+    <ClInclude Include="src\win32except.h" />
     <ClInclude Include="src\WinFirewall.h" />
     <ClInclude Include="src\ydkcomptr.h" />
     <ClInclude Include="src\YDKWinUtils.h" />
@@ -167,6 +169,7 @@
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebug</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MultiThreaded</RuntimeLibrary>
     </ClCompile>
+    <ClCompile Include="src\win32exception.cpp" />
     <ClCompile Include="src\WinFirewall.cpp" />
     <ClCompile Include="src\YDKWinUtils.cpp" />
   </ItemGroup>
