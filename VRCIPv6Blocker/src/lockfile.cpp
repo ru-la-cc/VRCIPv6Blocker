@@ -27,7 +27,7 @@ namespace ydk {
 			m_dwError = ::GetLastError();
 			return false;
 		}
-		m_dwError = 0;
+		m_dwError = ERROR_SUCCESS;
 		return true;
 	}
 
@@ -50,7 +50,7 @@ namespace ydk {
 				return false;
 			}
 		}
-		m_dwError = 0;
+		m_dwError = ERROR_SUCCESS;
 		return true;
 	}
 
@@ -77,7 +77,7 @@ namespace ydk {
 			m_dwError = ::GetLastError();
 			return false;
 		}
-		m_dwError = 0;
+		m_dwError = ERROR_SUCCESS;
 		return true;
 	}
 
@@ -87,11 +87,16 @@ namespace ydk {
 			return false;
 		}
 		m_hFile = INVALID_HANDLE_VALUE;
+		m_dwError = ERROR_SUCCESS;
+		return true;
+	}
+	bool LockFile::Cleanup() noexcept {
+		Unlock();
 		if (!::DeleteFileW(m_filePath.c_str())) {
 			m_dwError = ::GetLastError();
 			return false;
 		}
-		m_dwError = 0;
+		m_dwError = ERROR_SUCCESS;
 		return true;
 	}
 }

@@ -29,6 +29,10 @@ public:
 
 	Config(LPCWSTR path = nullptr, ydk::ILogger<WCHAR>* logger = nullptr) : m_IniFile(path ? path : L""), m_Logger(logger) {}
 	~Config() {}
+	Config(const Config&) = delete;
+	Config& operator=(const Config&) = delete;
+	Config(Config&&) = delete;
+	Config& operator=(Config&&) = delete;
 	void SetFilePath(LPCWSTR path) { m_IniFile = path; }
 	void SetLogger(ydk::ILogger<WCHAR>* logger) { m_Logger = logger; }
 	void Save();
