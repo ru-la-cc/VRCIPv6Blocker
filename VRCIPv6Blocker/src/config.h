@@ -13,13 +13,13 @@ class Config final {
 public:
 	struct INI_CONFIG {
 		unsigned __int64 ullVersion = 0LLU;
-		UINT uRunVRC = BST_UNCHECKED;
-		UINT uAutoShutdown = BST_UNCHECKED;
-		UINT uMinWindow = BST_UNCHECKED;
-		UINT uFirewallBlock = BST_UNCHECKED;
-		UINT uNonBlocking = BST_UNCHECKED;
-		UINT uRevert = BST_UNCHECKED;
-		UINT uOnlyVRC = BST_UNCHECKED;
+		UINT uRunVRC;
+		UINT uAutoShutdown;
+		UINT uMinWindow;
+		UINT uFirewallBlock;
+		UINT uNonBlocking;
+		UINT uRevert;
+		UINT uOnlyVRC;
 		std::wstring strExecutePath;
 		std::wstring strVRCFile;
 		std::wstring strDestIp;
@@ -36,7 +36,7 @@ public:
 private:
 	ydk::ILogger<WCHAR>* m_Logger;
 	std::wstring m_IniFile;
-	INI_CONFIG m_IniConfig;
+	INI_CONFIG m_IniConfig = {};
 	template<ConfigType T> void WriteKey(LPCWSTR key, T value, LPCWSTR format = L"%lld");
 	void LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value);
 	void Log(LPCWSTR message) { if (m_Logger) m_Logger->Log(message); }
