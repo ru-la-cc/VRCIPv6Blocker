@@ -798,7 +798,6 @@ void VRCIPv6BlockerApp::RemoveFirewall() {
 		}
 	}
 	else {
-		DWORD err = ::GetLastError();
 		m_Logger->LogError(L"ルールの削除に失敗");
 	}
 	GetSetting();

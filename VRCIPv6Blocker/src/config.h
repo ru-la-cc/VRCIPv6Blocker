@@ -2,18 +2,24 @@
 #include <windows.h>
 #include <string>
 #include <stdexcept>
+#include <concepts>
+#include <type_traits>
+#include "ILogger.h"
+
+template<typename T>
+concept ConfigType = std::integral<T> || std::floating_point<T> || std::same_as<T, LPCWSTR>;
 
 class Config final {
 public:
 	struct INI_CONFIG {
-		unsigned __int64 ullVersion;
-		UINT uRunVRC;
-		UINT uAutoShutdown;
-		UINT uMinWindow;
-		UINT uFirewallBlock;
-		UINT uNonBlocking;
-		UINT uRevert;
-		UINT uOnlyVRC;
+		unsigned __int64 ullVersion = 0LLU;
+		UINT uRunVRC = BST_UNCHECKED;
+		UINT uAutoShutdown = BST_UNCHECKED;
+		UINT uMinWindow = BST_UNCHECKED;
+		UINT uFirewallBlock = BST_UNCHECKED;
+		UINT uNonBlocking = BST_UNCHECKED;
+		UINT uRevert = BST_UNCHECKED;
+		UINT uOnlyVRC = BST_UNCHECKED;
 		std::wstring strExecutePath;
 		std::wstring strVRCFile;
 		std::wstring strDestIp;
@@ -21,13 +27,19 @@ public:
 		std::wstring strVRCFullPath;
 	};
 
-	Config() {}
-	Config(LPCWSTR path) : m_IniFile(path) {}
+	Config(LPCWSTR path = nullptr, ydk::ILogger<WCHAR>* logger = nullptr) : m_IniFile(path ? path : L""), m_Logger(logger) {}
 	~Config() {}
 	void SetFilePath(LPCWSTR path) { m_IniFile = path; }
-private:
-	std::wstring m_IniFile;
-	INI_CONFIG m_IniConfig;
 	void Save();
 	void Load();
+	void DebugLog();
+private:
+	ydk::ILogger<WCHAR>* m_Logger;
+	std::wstring m_IniFile;
+	INI_CONFIG m_IniConfig;
+	template<ConfigType T> void WriteKey(LPCWSTR key, T value, LPCWSTR format = L"%lld");
+	void LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value);
+	void Log(LPCWSTR message) { if (m_Logger) m_Logger->Log(message); }
+	void LogWarning(LPCWSTR message) { if (m_Logger) m_Logger->LogWarning(message); }
+	void LogError(LPCWSTR message) { if (m_Logger) m_Logger->LogError(message); }
 };
