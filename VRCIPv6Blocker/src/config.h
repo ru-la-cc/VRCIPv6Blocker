@@ -30,16 +30,18 @@ public:
 	Config(LPCWSTR path = nullptr, ydk::ILogger<WCHAR>* logger = nullptr) : m_IniFile(path ? path : L""), m_Logger(logger) {}
 	~Config() {}
 	void SetFilePath(LPCWSTR path) { m_IniFile = path; }
+	void SetLogger(ydk::ILogger<WCHAR>* logger) { m_Logger = logger; }
 	void Save();
 	void Load();
-	void DebugLog();
+	void DebugLog() const;
+	INI_CONFIG& GetConfig() { return m_IniConfig; }
 private:
-	ydk::ILogger<WCHAR>* m_Logger;
 	std::wstring m_IniFile;
+	ydk::ILogger<WCHAR>* m_Logger;
 	INI_CONFIG m_IniConfig = {};
 	template<ConfigType T> void WriteKey(LPCWSTR key, T value, LPCWSTR format = L"%lld");
 	void LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value);
-	void Log(LPCWSTR message) { if (m_Logger) m_Logger->Log(message); }
-	void LogWarning(LPCWSTR message) { if (m_Logger) m_Logger->LogWarning(message); }
-	void LogError(LPCWSTR message) { if (m_Logger) m_Logger->LogError(message); }
+	void Log(LPCWSTR message) const { if (m_Logger) m_Logger->Log(message); }
+	void LogWarning(LPCWSTR message) const { if (m_Logger) m_Logger->LogWarning(message); }
+	void LogError(LPCWSTR message) const { if (m_Logger) m_Logger->LogError(message); }
 };

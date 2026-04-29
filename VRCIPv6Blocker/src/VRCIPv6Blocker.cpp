@@ -55,7 +55,11 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	::swprintf_s(szVer, L"Ver. %u.%u.%u(%u)", v1, v2, v3, v4);
 	::SetDlgItemTextW(m_hWnd, IDC_STATIC_VERSION, szVer);
 
+	if (!m_blockList.LoadFromFile((m_ModulePath + App::BLOCK_LIST_FILE).c_str(), m_Logger)) {
+		::MessageBoxW(m_hWnd, L"ブロックリストの読込に失敗しました\n詳細はログを確認してください", L"エラー", MB_ICONERROR | MB_OK);
+	}
 	LoadBlockList();
+	m_Config.Load();
 	LoadSetting();
 
 	CheckIPv6Setting();
@@ -376,11 +380,13 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
     // コンストラクタ
 	m_Version = 0;
     m_ModulePath = ydk::GetModuleDir();
+	m_Config.SetFilePath((ydk::GetModuleDir() + APP_NAME + L".ini").c_str());
 	m_IniFile = m_ModulePath;
 	m_IniFile += APP_NAME;
 	m_IniFile += L".ini";
 	static auto logger = ydk::FileLogger((m_ModulePath + logFileName).c_str());
     m_Logger = &logger;
+	m_Config.SetLogger(m_Logger);
 	m_Logger->Log(L"アプリを起動します");
 
 	m_lpArgList = CommandLineToArgvW(GetCommandLineW(), &m_argc);

@@ -7,47 +7,47 @@ void Config::Save() {
 #ifdef _DEBUG
 	DebugLog();
 #endif
-	WriteKey(IK_VERSION, m_IniConfig.ullVersion, L"%llu");
-	WriteKey(IK_RUNVRC, m_IniConfig.uRunVRC, L"%u");
-	WriteKey(IK_AUTOSHUTDOWN, m_IniConfig.uAutoShutdown, L"%u");
-	WriteKey(IK_MINWINDOW, m_IniConfig.uMinWindow, L"%u");
-	WriteKey(IK_FIREWALLBLOCK, m_IniConfig.uFirewallBlock, L"%u");
-	WriteKey(IK_NONBLOCKING, m_IniConfig.uNonBlocking, L"%u");
-	WriteKey(IK_REVERT, m_IniConfig.uRevert, L"%u");
-	WriteKey(IK_ONLYVRC, m_IniConfig.uOnlyVRC, L"%u");
-	WriteKey(IK_EXECUTEPATH, m_IniConfig.strExecutePath.c_str());
-	WriteKey(IK_VRCFILE, m_IniConfig.strVRCFile.c_str());
-	WriteKey(IK_DESTIP, m_IniConfig.strDestIp.c_str());
-	WriteKey(IK_NIC, m_IniConfig.strNIC.c_str());
-	WriteKey(IK_VRCFULLPATH, m_IniConfig.strVRCFullPath.c_str());
+	WriteKey(App::IK_VERSION, m_IniConfig.ullVersion, L"%llu");
+	WriteKey(App::IK_RUNVRC, m_IniConfig.uRunVRC, L"%u");
+	WriteKey(App::IK_AUTOSHUTDOWN, m_IniConfig.uAutoShutdown, L"%u");
+	WriteKey(App::IK_MINWINDOW, m_IniConfig.uMinWindow, L"%u");
+	WriteKey(App::IK_FIREWALLBLOCK, m_IniConfig.uFirewallBlock, L"%u");
+	WriteKey(App::IK_NONBLOCKING, m_IniConfig.uNonBlocking, L"%u");
+	WriteKey(App::IK_REVERT, m_IniConfig.uRevert, L"%u");
+	WriteKey(App::IK_ONLYVRC, m_IniConfig.uOnlyVRC, L"%u");
+	WriteKey(App::IK_EXECUTEPATH, m_IniConfig.strExecutePath.c_str());
+	WriteKey(App::IK_VRCFILE, m_IniConfig.strVRCFile.c_str());
+	WriteKey(App::IK_DESTIP, m_IniConfig.strDestIp.c_str());
+	WriteKey(App::IK_NIC, m_IniConfig.strNIC.c_str());
+	WriteKey(App::IK_VRCFULLPATH, m_IniConfig.strVRCFullPath.c_str());
 }
 
 void Config::Load() {
-	m_IniConfig.uRunVRC = ::GetPrivateProfileIntW(APP_NAME, IK_RUNVRC, BST_CHECKED, m_IniFile.c_str());
-	m_IniConfig.uAutoShutdown = ::GetPrivateProfileIntW(APP_NAME, IK_AUTOSHUTDOWN, BST_CHECKED, m_IniFile.c_str());
-	m_IniConfig.uMinWindow = ::GetPrivateProfileIntW(APP_NAME, IK_MINWINDOW, BST_UNCHECKED, m_IniFile.c_str());
-	m_IniConfig.uFirewallBlock = ::GetPrivateProfileIntW(APP_NAME, IK_FIREWALLBLOCK, BST_CHECKED, m_IniFile.c_str());
-	m_IniConfig.uNonBlocking = ::GetPrivateProfileIntW(APP_NAME, IK_NONBLOCKING, BST_UNCHECKED, m_IniFile.c_str());
-	m_IniConfig.uRevert = ::GetPrivateProfileIntW(APP_NAME, IK_REVERT, BST_UNCHECKED, m_IniFile.c_str());
-	m_IniConfig.uOnlyVRC = ::GetPrivateProfileIntW(APP_NAME, IK_ONLYVRC, BST_UNCHECKED, m_IniFile.c_str());
+	m_IniConfig.uRunVRC = ::GetPrivateProfileIntW(APP_NAME, App::IK_RUNVRC, BST_CHECKED, m_IniFile.c_str());
+	m_IniConfig.uAutoShutdown = ::GetPrivateProfileIntW(APP_NAME, App::IK_AUTOSHUTDOWN, BST_CHECKED, m_IniFile.c_str());
+	m_IniConfig.uMinWindow = ::GetPrivateProfileIntW(APP_NAME, App::IK_MINWINDOW, BST_UNCHECKED, m_IniFile.c_str());
+	m_IniConfig.uFirewallBlock = ::GetPrivateProfileIntW(APP_NAME, App::IK_FIREWALLBLOCK, BST_CHECKED, m_IniFile.c_str());
+	m_IniConfig.uNonBlocking = ::GetPrivateProfileIntW(APP_NAME, App::IK_NONBLOCKING, BST_UNCHECKED, m_IniFile.c_str());
+	m_IniConfig.uRevert = ::GetPrivateProfileIntW(APP_NAME, App::IK_REVERT, BST_UNCHECKED, m_IniFile.c_str());
+	m_IniConfig.uOnlyVRC = ::GetPrivateProfileIntW(APP_NAME, App::IK_ONLYVRC, BST_UNCHECKED, m_IniFile.c_str());
 
 	WCHAR szBuf[MAX_PATH];
-	::GetPrivateProfileStringW(APP_NAME, IK_VERSION, L"0", szBuf, std::size(szBuf), m_IniFile.c_str());
+	::GetPrivateProfileStringW(APP_NAME, App::IK_VERSION, L"0", szBuf, std::size(szBuf), m_IniFile.c_str());
 	LPWSTR lpEnd;
 	m_IniConfig.ullVersion = std::wcstoull(szBuf, &lpEnd, 10);
 	if (*lpEnd || errno == ERANGE || !m_IniConfig.ullVersion) m_IniConfig.ullVersion = 0;
 
-	LoadKeyString(szBuf, std::size(szBuf), IK_EXECUTEPATH, m_IniConfig.strExecutePath);
-	LoadKeyString(szBuf, std::size(szBuf), IK_VRCFILE, m_IniConfig.strVRCFile);
-	LoadKeyString(szBuf, std::size(szBuf), IK_DESTIP, m_IniConfig.strDestIp);
-	LoadKeyString(szBuf, std::size(szBuf), IK_NIC, m_IniConfig.strNIC);
-	LoadKeyString(szBuf, std::size(szBuf), IK_VRCFULLPATH, m_IniConfig.strVRCFullPath);
+	LoadKeyString(szBuf, std::size(szBuf), App::IK_EXECUTEPATH, m_IniConfig.strExecutePath);
+	LoadKeyString(szBuf, std::size(szBuf), App::IK_VRCFILE, m_IniConfig.strVRCFile);
+	LoadKeyString(szBuf, std::size(szBuf), App::IK_DESTIP, m_IniConfig.strDestIp);
+	LoadKeyString(szBuf, std::size(szBuf), App::IK_NIC, m_IniConfig.strNIC);
+	LoadKeyString(szBuf, std::size(szBuf), App::IK_VRCFULLPATH, m_IniConfig.strVRCFullPath);
 #ifdef _DEBUG
 	DebugLog();
 #endif
 }
 
-void Config::DebugLog() {
+void Config::DebugLog() const {
 	// デバッグ用なんでエラーハンドリングはしない
 	WCHAR szLog[384];
 	::StringCchPrintfW(szLog,
@@ -61,25 +61,25 @@ void Config::DebugLog() {
 		m_IniConfig.uNonBlocking,
 		m_IniConfig.uRevert,
 		m_IniConfig.uOnlyVRC);
-	m_Logger->Log(szLog);
+	Log(szLog);
 
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
 		L"IniConfig : strExecutePath=%s",
 		m_IniConfig.strExecutePath.c_str());
-	m_Logger->Log(szLog);
+	Log(szLog);
 
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
 		L"IniConfig : strVRCFile=%s",
 		m_IniConfig.strVRCFile.c_str());
-	m_Logger->Log(szLog);
+	Log(szLog);
 
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
 		L"IniConfig : strDestIp=%s",
 		m_IniConfig.strDestIp.c_str());
-	m_Logger->Log(szLog);
+	Log(szLog);
 
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
@@ -90,7 +90,7 @@ void Config::DebugLog() {
 		std::size(szLog),
 		L"IniConfig : strVRCFullPath=%s",
 		m_IniConfig.strVRCFullPath.c_str());
-	m_Logger->Log(szLog);
+	Log(szLog);
 }
 
 template<ConfigType T> void Config::WriteKey(LPCWSTR key, T value, LPCWSTR format) {
