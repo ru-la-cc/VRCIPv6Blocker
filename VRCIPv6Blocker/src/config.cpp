@@ -113,9 +113,15 @@ template<ConfigType T> void Config::WriteKey(LPCWSTR key, T value, LPCWSTR forma
 void Config::LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value) {
 	::GetPrivateProfileStringW(APP_NAME, key, L"", buf, dwSize, m_IniFile.c_str());
 	DWORD err = ::GetLastError();
-	if (err != ERROR_SUCCESS) {
-		LogError((std::wstring(L"設定の読み込みに失敗: key=") + key).c_str());
-		throw ydk::Win32Exception(err);
+	switch (err) {
+		case ERROR_SUCCESS:
+			break;
+		case ERROR_FILE_NOT_FOUND:
+			LogWarning((std::wstring(L"設定がありません: ") + key).c_str());
+			break;
+		default:
+			LogError((std::wstring(L"設定の読み込みに失敗: key=") + key).c_str());
+			throw ydk::Win32Exception(err);
 	}
 	value = buf;
 }

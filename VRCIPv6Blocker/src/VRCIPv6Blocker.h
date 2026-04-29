@@ -16,22 +16,6 @@
 
 class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
-	struct INI_SETTING {
-		unsigned __int64 ullVersion;
-		UINT uRunVRC;
-		UINT uAutoShutdown;
-		UINT uMinWindow;
-		UINT uFirewallBlock;
-		UINT uNonBlocking;
-		UINT uRevert;
-		UINT uOnlyVRC;
-		std::wstring strExecutePath;
-		std::wstring strVRCFile;
-		std::wstring strDestIp;
-		std::wstring strNIC;
-		std::wstring strVRCFullPath;
-	};
-
 	enum class LOCK_KIND : WORD {
 		FW = 1,
 		Adapter = 2
@@ -50,13 +34,11 @@ public:
 	~VRCIPv6BlockerApp();
 	static VRCIPv6BlockerApp* Instance();
 private:
-	std::vector<std::wstring> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_IniFile;
 	LOCK_INFO m_LockInfo = {};
-	INI_SETTING m_Setting = {};
 	Config m_Config;
-	BlockList m_blockList;
+	BlockList m_BlockList;
 	ydk::ComInitializer m_comInitializer;
 	CRITICAL_SECTION m_tCs;
 	CRITICAL_SECTION m_tidCs;
@@ -120,12 +102,8 @@ private:
 	INT_PTR OnClose(HWND hDlg) override;
 	INT_PTR HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) override;
 
-	void LoadBlockList();
-	void LoadSetting();
-	bool SaveSetting();
-	void GetSetting();
-	void SetSetting();
-	void DumpSetting();
+	void ApplyDialogToConfig();
+	void ApplyConfigToDialog();
 	void CheckDialogControl();
 	void RevertBlock();
 	[[nodiscard]] DWORD GetVRChatProcess();
@@ -151,7 +129,7 @@ private:
 	void DeleteTask();
 
 	void WriteExePath();
-	// ---------------------------- 以下、使ってないけど残しておく
+	// ---------------------------- 以下、現時点では使用していない
 	std::wstring GetLinkPath(LPCWSTR lpLinkFile);
 	bool GetExeFilePath(LPCWSTR lpLaunchPath, std::wstring& exePath);
 };

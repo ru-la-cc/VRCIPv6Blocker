@@ -19,7 +19,7 @@ public:
 		UINT uFirewallBlock;
 		UINT uNonBlocking;
 		UINT uRevert;
-		UINT uOnlyVRC;
+		UINT uOnlyVRC; // VRChat.exeをfirewallに登録するかどうかのやつだった気がする(基本使わない)
 		std::wstring strExecutePath;
 		std::wstring strVRCFile;
 		std::wstring strDestIp;
