@@ -12,6 +12,7 @@ namespace ydk {
 			std::system_error(errorCode, std::system_category(), To_Multibyte(message)),
 			m_Message(message ? message : GetErrorMessage(errorCode)) {}
 		~Win32Exception() {}
+		LPCWSTR what_w() const noexcept { return m_Message.c_str(); }
 	private:
 		std::wstring m_Message;
 		static std::string To_Multibyte(LPCWSTR message);
