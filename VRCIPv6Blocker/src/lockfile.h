@@ -17,6 +17,7 @@ namespace ydk {
 		bool Lock(LPCBYTE buffer, DWORD bufsize) noexcept;
 		bool GetLockInfo(LPBYTE buffer, DWORD bufsize) const noexcept;
 		bool Unlock() noexcept;
+		bool Cleanup() noexcept;
 		[[nodiscard]] DWORD GetError() const noexcept { return m_dwError; }
 	private:
 		std::wstring m_filePath;

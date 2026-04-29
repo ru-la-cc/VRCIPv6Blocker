@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <memory>
 #include <string>
-#include <unordered_map>
+// #include <unordered_map>
 
 namespace ydk {
 	// 汎用ダイアログアプリ基底クラス

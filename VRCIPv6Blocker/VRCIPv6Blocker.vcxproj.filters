@@ -78,6 +78,9 @@
     <ClInclude Include="src\blocklist.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="src\rulectrl.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\DialogBase.cpp">
@@ -123,6 +126,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="src\blocklist.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rulectrl.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
