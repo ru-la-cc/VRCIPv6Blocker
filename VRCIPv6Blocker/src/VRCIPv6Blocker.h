@@ -11,9 +11,6 @@
 #include "defines.h"
 #include "../resource.h"
 
-#define APP_GUID L"{31952356-61C8-42F9-9D19-AC73E9AF5ED5}"
-#define APP_NAME L"VRCIPv6Blocker"
-
 class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
 	enum class LOCK_KIND : WORD {
@@ -49,26 +46,6 @@ private:
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	LPWSTR* m_lpArgList;
 	unsigned __int64 m_Version;
-
-	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
-	LPCWSTR INPRG_FILE = L"ipv6unblock.incomplete";
-	LPCWSTR VRCFILENAME = L"VRChat.exe";
-	static constexpr LPCWSTR REGISTER_NAME = APP_GUID L"_" APP_NAME;
-	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
-	LPCWSTR IK_VERSION = L"Version";
-	LPCWSTR IK_RUNVRC = L"RunVRC";
-	LPCWSTR IK_AUTOSHUTDOWN = L"AutoShutdown";
-	LPCWSTR IK_MINWINDOW = L"MinWindow";
-	LPCWSTR IK_FIREWALLBLOCK = L"FirewallBlock";
-	LPCWSTR IK_EXECUTEPATH = L"Execute";
-	LPCWSTR IK_NONBLOCKING = L"NonBlocking";
-	LPCWSTR IK_REVERT = L"Revert";
-	LPCWSTR IK_ONLYVRC = L"OnlyVRC";
-	LPCWSTR IK_VRCFILE = L"VRCFile";
-	LPCWSTR IK_DESTIP = L"DestIp";
-	LPCWSTR IK_NIC = L"NIC";
-	LPCWSTR IK_VRCFULLPATH = L"VRCFullPath";
-	LPCWSTR ARG_AUTORUN = L"-autorun";
 
 	HANDLE m_hMonThread = nullptr;
 	HANDLE m_hWaitThread = nullptr;
