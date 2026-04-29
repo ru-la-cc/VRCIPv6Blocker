@@ -45,7 +45,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
     // まぁこのあたりに初期化処理を書く予定
 	m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
 	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
-	m_pLockFile = std::make_unique<ydk::LockFile>((m_ModulePath + INPRG_FILE).c_str());
+	m_pLockFile = std::make_unique<ydk::LockFile>((m_ModulePath + App::INPRG_FILE).c_str());
 	WORD v1, v2, v3, v4;
 	ydk::GetAppVersion(&v1, &v2, &v3, &v4);
 	m_Version = (static_cast<unsigned __int64>(v1) << 48) |
@@ -74,7 +74,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	m_isFirewallBlocked = IsFirewallRegistered();
 	ApplyConfigToDialog();
 
-	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(App::REGISTER_NAME));
 
 	SetVRCProcessId(GetVRChatProcess());
 
@@ -400,7 +400,7 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 	m_IniFile = m_ModulePath;
 	m_IniFile += APP_NAME;
 	m_IniFile += L".ini";
-	static auto logger = ydk::FileLogger((m_ModulePath + logFileName).c_str());
+	static auto logger = ydk::FileLogger((m_ModulePath + App::LOGFILENAME).c_str());
     m_Logger = &logger;
 	m_Config.SetLogger(m_Logger);
 	m_Logger->Log(L"アプリを起動します");
@@ -412,7 +412,7 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 	}
 	else {
 		for (int i = 0; i < m_argc; ++i) {
-			m_isAutoRun = std::wcscmp(m_lpArgList[i], ARG_AUTORUN) == 0;
+			m_isAutoRun = std::wcscmp(m_lpArgList[i], App::ARG_AUTORUN) == 0;
 		}
 	}
 	if (m_isAutoRun) m_Logger->Log(L"オートモードで起動しました");
@@ -518,7 +518,7 @@ DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
 			if (_wcsicmp(pe32.szExeFile,
 					config.strVRCFile.length() > 0 ?
 					config.strVRCFile.c_str() :
-					VRCFILENAME) == 0) {
+					App::VRCFILENAME) == 0) {
 				processId = pe32.th32ProcessID;
 				break;
 			}
@@ -577,7 +577,7 @@ DWORD VRCIPv6BlockerApp::GetVRCProcessId() {
 
 bool VRCIPv6BlockerApp::IsFirewallRegistered() {
 	HRESULT hr;
-	if (ydk::ExistsFirewallRule(REGISTER_NAME, &hr)) {
+	if (ydk::ExistsFirewallRule(App::REGISTER_NAME, &hr)) {
 		m_Logger->LogWarning(L"同一のルール名あり！登録する場合ルールは上書きされます");
 		return true;
 	}
@@ -613,7 +613,7 @@ void VRCIPv6BlockerApp::SetFirewall() {
 	auto& config = m_Config.GetConfig();
 	DWORD dwAttr = ::GetFileAttributesW(config.strVRCFullPath.c_str());
 	if(!ydk::RegisterFirewallRule(
-		REGISTER_NAME,
+		App::REGISTER_NAME,
 		m_BlockList.GetBlockList(),
 		nullptr,
 		L"VRChat IPv6 Block Rule",
@@ -631,7 +631,7 @@ void VRCIPv6BlockerApp::SetFirewall() {
 
 void VRCIPv6BlockerApp::RemoveFirewall() {
 	HRESULT hr;
-	if (ydk::RemoveFirewallRule(REGISTER_NAME, &hr)) {
+	if (ydk::RemoveFirewallRule(App::REGISTER_NAME, &hr)) {
 		if (hr == S_OK) {
 			m_Logger->Log(L"Firewallの対象ルールを削除しました");
 			m_isFirewallBlocked = false;
@@ -685,10 +685,10 @@ void VRCIPv6BlockerApp::WriteGuid(LPCWSTR lpGuid) {
 	if(lpGuid == nullptr || config.uFirewallBlock == BST_CHECKED) config.uRevert = BST_UNCHECKED;
 	WCHAR szChk[32];
 	::swprintf_s(szChk, L"%u", config.uRevert);
-	if(!::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szChk, m_IniFile.c_str())) {
+	if(!::WritePrivateProfileStringW(APP_NAME, App::IK_REVERT, szChk, m_IniFile.c_str())) {
 		m_Logger->LogError(L"IPv6設定書込みに失敗しました");
 	}
-	if(!::WritePrivateProfileStringW(APP_NAME, IK_NIC, lpGuid, m_IniFile.c_str())){
+	if(!::WritePrivateProfileStringW(APP_NAME, App::IK_NIC, lpGuid, m_IniFile.c_str())){
 		m_Logger->LogError(L"ネットワークアダプタ情報の書込みに失敗しました");
 	}
 }
@@ -850,7 +850,7 @@ bool VRCIPv6BlockerApp::CreateShortcut() {
 		L"ショートカット(*.lnk)\0 * .lnk\0\0"
 	)) {
 		auto arg = std::wstring(L"/run /tn \"");
-		arg += REGISTER_NAME;
+		arg += App::REGISTER_NAME;
 		arg += L"\"";
 		WCHAR szModuleFile[MAX_PATH] = {};
 		::GetModuleFileNameW(m_hInstance, szModuleFile, std::size(szModuleFile));
@@ -875,7 +875,7 @@ bool VRCIPv6BlockerApp::CreateShortcut() {
 }
 
 void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
-	if (ydk::IsExistSchedule(REGISTER_NAME)) {
+	if (ydk::IsExistSchedule(App::REGISTER_NAME)) {
 		if (::MessageBoxW(
 				m_hWnd,
 				L"既に同名のタスクがあります。\n更新していいですか？",
@@ -891,7 +891,7 @@ void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
 	::GetModuleFileNameW(m_hInstance, szPath, std::size(szPath));
 	szPath[std::size(szPath) - 1] = L'\0'; // ねんのため
 
-	HRESULT hr = ydk::RegisterTaskScheduler(REGISTER_NAME, szPath, ARG_AUTORUN, m_ModulePath.c_str());
+	HRESULT hr = ydk::RegisterTaskScheduler(App::REGISTER_NAME, szPath, App::ARG_AUTORUN, m_ModulePath.c_str());
 	if (FAILED(hr)) {
 		WCHAR szbuf[100];
 		::swprintf_s(szbuf, std::size(szbuf), L"hr=%lu(0x%08X)", hr, hr);
@@ -902,7 +902,7 @@ void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
 		return;
 	}
 	else {
-		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(App::REGISTER_NAME));
 	}
 
 	// ショートカット作るぞ
@@ -919,7 +919,7 @@ void VRCIPv6BlockerApp::DeleteTask() {
 	) != IDYES) {
 		return;
 	}
-	if (FAILED(ydk::RemoveTaskScheduler(REGISTER_NAME))) {
+	if (FAILED(ydk::RemoveTaskScheduler(App::REGISTER_NAME))) {
 		m_Logger->LogError(L"タスクスケジューラの削除に失敗しました");
 		::MessageBoxW(m_hWnd, L"タスクスケジューラの削除に失敗しました", L"エラー", MB_ICONERROR | MB_OK);
 	}
@@ -930,13 +930,13 @@ void VRCIPv6BlockerApp::DeleteTask() {
 			L"現在のショートカットは無効になりますので再度登録する場合はショートカットから作り直してください",
 			L"通知",
 			MB_ICONINFORMATION | MB_OK);
-		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(App::REGISTER_NAME));
 	}
 }
 
 
 void VRCIPv6BlockerApp::WriteExePath() {
-	::WritePrivateProfileStringW(APP_NAME, IK_VRCFULLPATH, m_Config.GetConfig().strVRCFullPath.c_str(), m_IniFile.c_str());
+	::WritePrivateProfileStringW(APP_NAME, App::IK_VRCFULLPATH, m_Config.GetConfig().strVRCFullPath.c_str(), m_IniFile.c_str());
 }
 
 
