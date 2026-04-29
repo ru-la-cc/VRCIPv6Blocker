@@ -5,7 +5,10 @@
 #include "ISubclass.h"
 #include "ComInitializer.h"
 #include "lockfile.h"
+#include "config.h"
+#include "blocklist.h"
 #include <vector>
+#include "defines.h"
 #include "../resource.h"
 
 #define APP_GUID L"{31952356-61C8-42F9-9D19-AC73E9AF5ED5}"
@@ -52,6 +55,8 @@ private:
 	std::wstring m_IniFile;
 	LOCK_INFO m_LockInfo = {};
 	INI_SETTING m_Setting = {};
+	Config m_Config;
+	BlockList m_blockList;
 	ydk::ComInitializer m_comInitializer;
 	CRITICAL_SECTION m_tCs;
 	CRITICAL_SECTION m_tidCs;

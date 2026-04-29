@@ -60,7 +60,6 @@ namespace ydk {
 			hr == HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
 	}
 
-	// ---- 公開 API（bool 戻り / HRESULT* は任意で受け取り） -------------------------
 	// 1) ルール存在確認（存在= true / 無しまたは失敗= false）
 	//    *hResult = S_OK(存在) / S_FALSE(非存在)
 	bool ExistsFirewallRule(LPCWSTR ruleName, HRESULT* hResult) {
@@ -135,8 +134,7 @@ namespace ydk {
 				SetHr(E_FAIL, hResult); return false;
 			}
 			// 対象のexe指定されたら...
-			// if (appExePath && *appExePath) {
-			if (!exe.empty()) { // こっちの判定が自然か？
+			if (!exe.empty()) {
 				if (FAILED(rule->put_ApplicationName(CComBSTR(exe.c_str())))) {
 					SetHr(E_FAIL, hResult); return false;
 				}
@@ -171,27 +169,6 @@ namespace ydk {
 
 		hr = rules->Add(rule);
 		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
-		SetHr(S_OK, hResult); return true;
-		// 新規
-		rule.Release();
-		hr = rule.CoCreateInstance(__uuidof(NetFwRule));
-		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
-
-		if (FAILED(rule->put_Name(CComBSTR(ruleName))) ||
-			FAILED(rule->put_Description(CComBSTR(lpDescription))) ||
-			FAILED(rule->put_Direction(NET_FW_RULE_DIR_OUT)) ||
-			FAILED(rule->put_Action(NET_FW_ACTION_BLOCK)) ||
-			FAILED(rule->put_Protocol(NET_FW_IP_PROTOCOL_ANY)) ||
-			FAILED(rule->put_Enabled(VARIANT_TRUE)) ||
-			FAILED(rule->put_Profiles(NET_FW_PROFILE2_ALL)) ||
-			FAILED(rule->put_RemoteAddresses(CComBSTR(joined.c_str())))) {
-			SetHr(E_FAIL, hResult);
-			return false;
-		}
-
-		hr = rules->Add(rule);
-		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
-
 		SetHr(S_OK, hResult);
 		return true;
 	}

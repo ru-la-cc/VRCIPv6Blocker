@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\AppMutex.h" />
+    <ClInclude Include="src\blocklist.h" />
     <ClInclude Include="src\ComInitializer.h" />
     <ClInclude Include="src\config.h" />
     <ClInclude Include="src\defines.h" />
@@ -157,6 +158,7 @@
     <ClInclude Include="src\YDKWinUtils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\blocklist.cpp" />
     <ClCompile Include="src\config.cpp" />
     <ClCompile Include="src\DialogBase.cpp" />
     <ClCompile Include="src\FileLogger.cpp" />
