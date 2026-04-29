@@ -39,7 +39,7 @@ namespace ydk {
 		virtual INT_PTR HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 		// メッセージループのカスタマイズ用
-		virtual bool PreTranslateMessage(MSG* pMsg) { return false; }
+		virtual bool PreTranslateMessage([[maybe_unused]] MSG* pMsg) { return false; }
 		virtual void OnIdle() {}  // アイドル処理
 
 	private:

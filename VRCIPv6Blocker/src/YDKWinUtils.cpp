@@ -103,7 +103,7 @@ namespace ydk {
 	}
 
 	std::wstring GetErrorMessage(DWORD dwError) {
-		WCHAR szMessage[1024];
+		WCHAR szMessage[256];
 		std::wstring resultMessage;
 
 		if (::FormatMessageW(

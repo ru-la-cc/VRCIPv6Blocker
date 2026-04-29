@@ -19,8 +19,8 @@ namespace ydk {
 		~ComPtr() { reset(); }
 
 		T* get()  const noexcept { return p_; }
-		T** put()        noexcept { reset(); return &p_; } // 受け渡し用
-		T* detach()     noexcept { T* t = p_; p_ = nullptr; return t; }
+		T** put() noexcept { reset(); return &p_; } // 受け渡し用
+		T* detach() noexcept { T* t = p_; p_ = nullptr; return t; }
 		void reset(T* p = nullptr) noexcept { if (p_) p_->Release(); p_ = p; }
 		T* operator->() const noexcept { return p_; }
 		explicit operator bool() const noexcept { return p_ != nullptr; }
