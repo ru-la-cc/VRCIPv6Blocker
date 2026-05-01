@@ -1,6 +1,7 @@
 ﻿#include "vrcprocess.h"
 #include "YDKWinUtils.h"
 #include <tlhelp32.h>
+#include "UserProcessLauncher.h"
 
 bool VRCProcess::FindProcess() {
 	struct SnapshotHandle final {
@@ -43,7 +44,26 @@ bool VRCProcess::FindProcess() {
 }
 
 DWORD VRCProcess::GetProcessID() {
+	CSLock lock(m_cs);
 	if (m_hProcess && ::WaitForSingleObject(m_hProcess, 0) == WAIT_TIMEOUT) return m_ProcessID;
 	FindProcess();
 	return m_ProcessID;
+}
+
+int VRCProcess::UserExecute(LPCWSTR lpExePath) {
+	if (GetProcessID()) {
+		m_Logger->LogError(L"既に起動してるので起動しないでほしい");
+		return 0;
+	}
+	auto pid = ydk::ShellExecuteWithLoginUser(lpExePath);
+	if (!pid) {
+		m_Logger->LogError(L"起動できませんでした");
+		return -1;
+	}
+	else {
+		WCHAR szMsg[256];
+		::swprintf_s(szMsg, L"プロセスID(%lu)で起動しました(ランチャーの可能性もあるからこのPIDは信用できん)", pid);
+		m_Logger->Log(szMsg);
+		return 1;
+	}
 }
