@@ -54,26 +54,26 @@ namespace ydk {
 		return true;
 	}
 
-	bool LockFile::GetLockInfo(LPBYTE buffer, DWORD bufsize) const noexcept {
-		HANDLE hFile = IsLocked() ? m_hFile :
-			::CreateFileW(m_filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-		if (hFile == INVALID_HANDLE_VALUE) {
+	bool LockFile::Reacquire() noexcept {
+		if (IsLocked()) return false;
+		m_hFile = ::CreateFileW(m_filePath.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (m_hFile == INVALID_HANDLE_VALUE) {
 			m_dwError = ::GetLastError();
 			return false;
 		}
+		m_dwError = ERROR_SUCCESS;
+		return true;
+	}
+
+	bool LockFile::GetLockInfo(LPBYTE buffer, DWORD bufsize) const noexcept {
 		DWORD readBytes;
 		if (IsLocked()) {
-			if (::SetFilePointer(hFile, 0, nullptr, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+			if (::SetFilePointer(m_hFile, 0, nullptr, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
 				m_dwError = ::GetLastError();
 				return false;
 			}
 		}
-		if (!::ReadFile(hFile, buffer, bufsize, &readBytes, nullptr) || readBytes != bufsize) {
-			m_dwError = ::GetLastError();
-			if(hFile != m_hFile) ::CloseHandle(hFile);
-			return false;
-		}
-		if (!IsLocked() && !::CloseHandle(hFile)) {
+		if (!::ReadFile(m_hFile, buffer, bufsize, &readBytes, nullptr) || readBytes != bufsize) {
 			m_dwError = ::GetLastError();
 			return false;
 		}
@@ -90,6 +90,7 @@ namespace ydk {
 		m_dwError = ERROR_SUCCESS;
 		return true;
 	}
+
 	bool LockFile::Cleanup() noexcept {
 		Unlock();
 		if (!::DeleteFileW(m_filePath.c_str())) {

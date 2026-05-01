@@ -44,7 +44,7 @@ private:
 	ydk::ILogger<WCHAR>* m_Logger;
 	INI_CONFIG m_IniConfig = {};
 	template<ConfigType T> void WriteKey(LPCWSTR key, T value, LPCWSTR format = L"%lld");
-	void LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value);
+	void LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value, LPCWSTR lpDefault = L"");
 	void Log(LPCWSTR message) const { if (m_Logger) m_Logger->Log(message); }
 	void LogWarning(LPCWSTR message) const { if (m_Logger) m_Logger->LogWarning(message); }
 	void LogError(LPCWSTR message) const { if (m_Logger) m_Logger->LogError(message); }
