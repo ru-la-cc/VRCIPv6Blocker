@@ -7,12 +7,12 @@
 #include "ILogger.h"
 
 template<typename T>
-concept ConfigType = std::integral<T> || std::floating_point<T> || std::same_as<T, LPCWSTR>;
+concept ConfigType = std::integral<T> || std::floating_point<T>;
 
 class Config final {
 public:
 	struct INI_CONFIG {
-		unsigned __int64 ullVersion = 0LLU;
+		unsigned __int64 ullVersion;
 		UINT uRunVRC;
 		UINT uAutoShutdown;
 		UINT uMinWindow;
@@ -28,7 +28,7 @@ public:
 	};
 
 	Config(LPCWSTR path = nullptr, ydk::ILogger<WCHAR>* logger = nullptr) : m_IniFile(path ? path : L""), m_Logger(logger) {}
-	~Config() {}
+	~Config() = default;
 	Config(const Config&) = delete;
 	Config& operator=(const Config&) = delete;
 	Config(Config&&) = delete;
@@ -43,7 +43,8 @@ private:
 	std::wstring m_IniFile;
 	ydk::ILogger<WCHAR>* m_Logger;
 	INI_CONFIG m_IniConfig = {};
-	template<ConfigType T> void WriteKey(LPCWSTR key, T value, LPCWSTR format = L"%lld");
+	void WriteKey(LPCWSTR key, LPCWSTR value);
+	template<ConfigType T> void WriteKey(LPCWSTR key, T value, LPCWSTR format);
 	void LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value, LPCWSTR lpDefault = L"");
 	void Log(LPCWSTR message) const { if (m_Logger) m_Logger->Log(message); }
 	void LogWarning(LPCWSTR message) const { if (m_Logger) m_Logger->LogWarning(message); }

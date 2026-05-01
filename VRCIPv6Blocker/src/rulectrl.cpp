@@ -5,7 +5,7 @@
 #include "win32except.h"
 
 RuleController::RuleController(LPCWSTR lpLockFileName, ydk::ILogger<WCHAR>* logger, const Config::INI_CONFIG& config)
-	: m_Logger(logger), m_LockFile(std::make_unique<ydk::LockFile>(lpLockFileName)), m_conf(config) {
+	: m_LockFile(std::make_unique<ydk::LockFile>(lpLockFileName)), m_Logger(logger), m_conf(config) {
 	if (m_LockFile->IsExist()) {
 		// ロックファイルが存在したら、そこに復元するべき情報がある
 		m_Logger->LogWarning(L"アプリの異常終了を検出したため設定の復元を行います");

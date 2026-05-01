@@ -34,11 +34,12 @@ void Config::Load() {
 	WCHAR szBuf[MAX_PATH];
 	::GetPrivateProfileStringW(APP_NAME, IK_VERSION, L"0", szBuf, std::size(szBuf), m_IniFile.c_str());
 	LPWSTR lpEnd;
+	errno = 0;
 	m_IniConfig.ullVersion = std::wcstoull(szBuf, &lpEnd, 10);
 	if (*lpEnd || errno == ERANGE || !m_IniConfig.ullVersion) m_IniConfig.ullVersion = 0;
 
 	LoadKeyString(szBuf, std::size(szBuf), IK_EXECUTEPATH, m_IniConfig.strExecutePath);
-	LoadKeyString(szBuf, std::size(szBuf), IK_VRCFILE, m_IniConfig.strVRCFile);
+	LoadKeyString(szBuf, std::size(szBuf), IK_VRCFILE, m_IniConfig.strVRCFile, VRCFILENAME);
 	LoadKeyString(szBuf, std::size(szBuf), IK_DESTIP, m_IniConfig.strDestIp, DEF_GATEWAY_HINT_IP);
 	LoadKeyString(szBuf, std::size(szBuf), IK_NIC, m_IniConfig.strNIC);
 	LoadKeyString(szBuf, std::size(szBuf), IK_VRCFULLPATH, m_IniConfig.strVRCFullPath);
@@ -85,6 +86,7 @@ void Config::DebugLog() const {
 		std::size(szLog),
 		L"IniConfig : strNIC=%s",
 		m_IniConfig.strNIC.c_str());
+	Log(szLog);
 
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
@@ -93,35 +95,23 @@ void Config::DebugLog() const {
 	Log(szLog);
 }
 
-template<ConfigType T> void Config::WriteKey(LPCWSTR key, T value, LPCWSTR format) {
-	WCHAR szBuf[64];
-	LPCWSTR writeValue = szBuf;
+void Config::WriteKey(LPCWSTR key, LPCWSTR value) {
 	DWORD err;
-	if constexpr (std::same_as<T, LPCWSTR>) {
-		writeValue = value;
-	}
-	else {
-		::StringCchPrintfW(szBuf, std::size(szBuf), format, value);
-	}
-	if (!::WritePrivateProfileStringW(APP_NAME, key, writeValue, m_IniFile.c_str()) &&
+	if (!::WritePrivateProfileStringW(APP_NAME, key, value, m_IniFile.c_str()) &&
 		(err = ::GetLastError()) != ERROR_SUCCESS) {
 		LogError((std::wstring(L"設定の書き込みに失敗: key=") + key).c_str());
 		throw ydk::Win32Exception(err);
 	}
 }
 
+template<ConfigType T>
+void Config::WriteKey(LPCWSTR key, T value, LPCWSTR format) {
+	WCHAR szBuf[64];
+	::StringCchPrintfW(szBuf, std::size(szBuf), format, value);
+	WriteKey(key, szBuf);
+}
+
 void Config::LoadKeyString(LPWSTR buf, DWORD dwSize, LPCWSTR key, std::wstring& value, LPCWSTR lpDefault) {
 	::GetPrivateProfileStringW(APP_NAME, key, lpDefault, buf, dwSize, m_IniFile.c_str());
-	DWORD err = ::GetLastError();
-	switch (err) {
-		case ERROR_SUCCESS:
-			break;
-		case ERROR_FILE_NOT_FOUND:
-			LogWarning((std::wstring(L"設定がありません: ") + key).c_str());
-			break;
-		default:
-			LogError((std::wstring(L"設定の読み込みに失敗: key=") + key).c_str());
-			throw ydk::Win32Exception(err);
-	}
 	value = buf;
 }

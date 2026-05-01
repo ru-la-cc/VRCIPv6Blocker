@@ -5,7 +5,7 @@
 bool BlockList::LoadFromFile(LPCWSTR lpFileName, ydk::ILogger<WCHAR>* logger) {
 	m_BlockList.clear();
 	logger->Log(L"IPv6ブロックリストの読込...");
-	auto pf = ydk::OpenReadFile(lpFileName);
+	auto pf = ydk::OpenReadFile(lpFileName); // なければ空ファイルを作るのは意図通り
 	if (!pf) {
 		logger->LogError((std::wstring(lpFileName) + L"を開けません").c_str());
 		return false;

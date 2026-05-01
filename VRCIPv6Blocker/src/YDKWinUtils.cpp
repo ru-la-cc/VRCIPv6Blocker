@@ -124,7 +124,7 @@ namespace ydk {
 				szMessage,
 				std::size(szMessage),
 				nullptr)) {
-			szMessage[std::size(szMessage) - 1] = L'\0'; // バッファオーバーしても\0つくかわからんし失敗として戻るのかわからんから保険的に...
+			szMessage[std::size(szMessage) - 1] = L'\0'; // 保険
 		}
 		else {
 			// しかしエラーメッセージ取りに行く処理でエラーになるとか滑稽だな

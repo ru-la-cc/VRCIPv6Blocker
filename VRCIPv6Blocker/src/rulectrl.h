@@ -46,11 +46,11 @@ public:
 	}
 	bool Cleanup() noexcept { return m_LockFile->Cleanup(); } // ロックファイルを削除するだけ（設定をそのままにしておく場合とか）
 private:
+	std::unique_ptr<ydk::LockFile> m_LockFile;
+	ydk::ILogger<WCHAR>* m_Logger;
 	const Config::INI_CONFIG& m_conf;
 	LOCK_INFO m_LockInfo = {};
 	mutable ydk::AdapterKey m_AdapterKey = {};
-	ydk::ILogger<WCHAR>* m_Logger;
-	std::unique_ptr<ydk::LockFile> m_LockFile;
 	bool IsExistsFirewallRule() const;
 	bool IsIPv6Enabled() const;
 	bool m_DefaultRuleExists = false;

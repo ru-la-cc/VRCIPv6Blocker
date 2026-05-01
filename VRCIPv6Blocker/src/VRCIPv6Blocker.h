@@ -8,6 +8,7 @@
 #include "lockfile.h"
 #include "config.h"
 #include "blocklist.h"
+#include "tasksc.h"
 #include <vector>
 #include "defines.h"
 #include "../resource.h"
@@ -22,6 +23,7 @@ private:
 	Config m_Config;
 	BlockList m_BlockList;
 	std::unique_ptr<RuleController> m_pRule;
+	std::unique_ptr<IPv6BlockScheduler> m_TaskScheduler;
 	ydk::ComInitializer m_comInitializer;
 	CRITICAL_SECTION m_tCs;
 	CRITICAL_SECTION m_tidCs;
@@ -75,9 +77,9 @@ private:
 	void WriteGuid(LPCWSTR lpGuid);
 	void AutoStart();
 	void AutoExit();
-	bool CreateShortcut();
-	void CreateScheduledTaskWithShortcut();
-	void DeleteTask();
+	void CreateShortcut();
+	void OnClickMakeLinkButton();
+	void OnClickDeleteTask();
 
 	void WriteExePath();
 	// ---------------------------- 以下、現時点では使用していない
