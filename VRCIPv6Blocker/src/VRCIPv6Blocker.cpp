@@ -45,6 +45,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
     // まぁこのあたりに初期化処理を書く予定
 	m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
 	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
+	m_TaskScheduler = std::make_unique<IPv6BlockScheduler>(m_Logger);
 	WORD v1, v2, v3, v4;
 	ydk::GetAppVersion(&v1, &v2, &v3, &v4);
 	m_Version = (static_cast<unsigned __int64>(v1) << 48) |
@@ -70,8 +71,6 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	}
 	m_pRule = std::make_unique<RuleController>((m_ModulePath + INPRG_FILE).c_str(), m_Logger, m_Config.GetConfig());
 	ApplyConfigToDialog();
-
-	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
 
 	SetVRCProcessId(GetVRChatProcess());
 
@@ -219,11 +218,11 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 		return TRUE;
 
 	case IDC_BUTTON_MAKELINK:
-		CreateScheduledTaskWithShortcut();
+		OnClickMakeLinkButton();
 		return TRUE;
 
 	case IDC_BUTTON_DELTS:
-		DeleteTask();
+		OnClickDeleteTask();
 		return TRUE;
 
 	case IDC_BUTTON_SAVE:
@@ -505,6 +504,8 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_MAKELINK), !m_isAutoRun);
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_SAVE), !m_isAutoRun);
+
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && m_TaskScheduler->IsExists());
 }
 
 DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
@@ -638,8 +639,9 @@ void VRCIPv6BlockerApp::AutoExit() {
 	}
 }
 
-bool VRCIPv6BlockerApp::CreateShortcut() {
-	WCHAR szFileName[MAX_PATH] = L"VRChat - IPv6 Block";
+void VRCIPv6BlockerApp::CreateShortcut() {
+	WCHAR szFileName[MAX_PATH];
+	::StringCchCopyW(szFileName, std::size(szFileName), DEF_SHORTCUT_NAME);
 	if (ydk::SaveFileName(m_hWnd, szFileName, std::size(szFileName), L"ショートカットの保存先",
 		OFN_OVERWRITEPROMPT,
 		L"ショートカット(*.lnk)\0 * .lnk\0\0"
@@ -652,7 +654,6 @@ bool VRCIPv6BlockerApp::CreateShortcut() {
 		szModuleFile[std::size(szModuleFile) - 1] = L'\0';
 		if (!ydk::CreateShortcut(szFileName, L"schtasks", L"C:\\WINDOWS\\system32\\", szModuleFile, -IDI_APPICON, arg.c_str())) {
 			m_Logger->LogError(L"ショートカットの作成に失敗しました");
-			return false;
 		}
 		else {
 			m_Logger->LogError(L"ショートカットを作成しました");
@@ -663,20 +664,19 @@ bool VRCIPv6BlockerApp::CreateShortcut() {
 				L"※もしアプリのフォルダを変更する場合は作り直してください",
 				L"通知",
 				MB_ICONINFORMATION | MB_OK);
-			return true;
 		}
 	}
-	return false;
 }
 
-void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
-	if (ydk::IsExistSchedule(REGISTER_NAME)) {
+void VRCIPv6BlockerApp::OnClickMakeLinkButton() {
+	if (m_TaskScheduler->IsExists()) {
+		// 本来はここに来ることはないはず
 		if (::MessageBoxW(
-				m_hWnd,
-				L"既に同名のタスクがあります。\n更新していいですか？",
-				L"確認",
-				MB_ICONQUESTION | MB_YESNO
-			) != IDYES) {
+			m_hWnd,
+			L"既に同名のタスクがあります。\n上書きしていいですか？",
+			L"確認",
+			MB_ICONQUESTION | MB_YESNO
+		) != IDYES) {
 			return;
 		}
 		m_Logger->LogWarning(L"現在のタスクスケジューラの設定を上書きします");
@@ -686,24 +686,15 @@ void VRCIPv6BlockerApp::CreateScheduledTaskWithShortcut() {
 	::GetModuleFileNameW(m_hInstance, szPath, std::size(szPath));
 	szPath[std::size(szPath) - 1] = L'\0'; // ねんのため
 
-	HRESULT hr = ydk::RegisterTaskScheduler(REGISTER_NAME, szPath, ARG_AUTORUN, m_ModulePath.c_str());
-	if (FAILED(hr)) {
-		WCHAR szbuf[100];
-		::swprintf_s(szbuf, std::size(szbuf), L"hr=%lu(0x%08X)", hr, hr);
-		m_Logger->LogError(szbuf);
-		// ログ等
-		m_Logger->LogError(L"タスクスケジューラの登録でエラーが発生しました");
+	if (!m_TaskScheduler->CreateSchedule(szPath, ARG_AUTORUN, m_ModulePath.c_str())) {
 		::MessageBoxW(m_hWnd, L"タスクスケジューラの登録でエラーが発生しました", L"エラー", MB_ICONERROR | MB_OK);
 		return;
 	}
-	else {
-		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
-	}
-
 	CreateShortcut();
+	CheckDialogControl();
 }
 
-void VRCIPv6BlockerApp::DeleteTask() {
+void VRCIPv6BlockerApp::OnClickDeleteTask() {
 	if (::MessageBoxW(
 		m_hWnd,
 		L"タスクを削除すると作成したショートカットも無効になりますがいいですか？\n"
@@ -713,21 +704,17 @@ void VRCIPv6BlockerApp::DeleteTask() {
 	) != IDYES) {
 		return;
 	}
-	if (FAILED(ydk::RemoveTaskScheduler(REGISTER_NAME))) {
-		m_Logger->LogError(L"タスクスケジューラの削除に失敗しました");
+	if (!m_TaskScheduler->DeleteSchedule()) {
 		::MessageBoxW(m_hWnd, L"タスクスケジューラの削除に失敗しました", L"エラー", MB_ICONERROR | MB_OK);
-	}
-	else {
-		m_Logger->LogWarning(L"タスクスケジューラから削除しました");
+	} else {
 		::MessageBoxW(m_hWnd,
 			L"タスクスケジューラから削除しました\n"
 			L"現在のショートカットは無効になりますので再度登録する場合はショートカットから作り直してください",
 			L"通知",
 			MB_ICONINFORMATION | MB_OK);
-		::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && ydk::IsExistSchedule(REGISTER_NAME));
 	}
+	CheckDialogControl();
 }
-
 
 void VRCIPv6BlockerApp::WriteExePath() {
 	::WritePrivateProfileStringW(APP_NAME, IK_VRCFULLPATH, m_Config.GetConfig().strVRCFullPath.c_str(), m_IniFile.c_str());

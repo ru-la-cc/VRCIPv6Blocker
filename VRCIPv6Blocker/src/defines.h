@@ -9,6 +9,7 @@ constexpr const wchar_t* REGISTER_NAME = APP_GUID L"_" APP_NAME;
 constexpr const wchar_t* BLOCK_LIST_FILE = L"blocklist.txt";
 constexpr const wchar_t* ARG_AUTORUN = L"-autorun";
 constexpr const wchar_t* DEF_GATEWAY_HINT_IP = L"8.8.8.8";
+constexpr const wchar_t* DEF_SHORTCUT_NAME = L"VRChat - IPv6 Block";
 
 constexpr const wchar_t* IK_VERSION = L"Version";
 constexpr const wchar_t* IK_RUNVRC = L"RunVRC";
