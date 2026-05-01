@@ -175,7 +175,6 @@
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebug</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MultiThreaded</RuntimeLibrary>
     </ClCompile>
-    <ClCompile Include="src\win32exception.cpp" />
     <ClCompile Include="src\WinFirewall.cpp" />
     <ClCompile Include="src\YDKWinUtils.cpp" />
   </ItemGroup>

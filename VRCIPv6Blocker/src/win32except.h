@@ -15,6 +15,19 @@ namespace ydk {
 		LPCWSTR what_w() const noexcept { return m_Message.c_str(); }
 	private:
 		std::wstring m_Message;
-		static std::string To_Multibyte(LPCWSTR message);
+	};
+
+	// この例外を実装しておこう
+	// 続行に耐えられぬ時投げるがいい
+	class YDKException final : public std::runtime_error {
+	public:
+		YDKException(LPCWSTR message = nullptr) :
+			std::runtime_error(To_Multibyte(message)),
+			m_Message(message ? message : L"The app crashed") {
+		}
+		~YDKException() {}
+		LPCWSTR what_w() const noexcept { return m_Message.c_str(); }
+	private:
+		std::wstring m_Message;
 	};
 }

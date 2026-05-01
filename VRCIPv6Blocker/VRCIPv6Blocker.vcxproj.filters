@@ -119,9 +119,6 @@
     <ClCompile Include="src\lockfile.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="src\win32exception.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="src\config.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>

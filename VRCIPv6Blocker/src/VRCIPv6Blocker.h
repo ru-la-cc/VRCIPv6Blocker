@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "rulectrl.h"
 #include "ipv6conf.h"
 #include "DialogBase.h"
 #include "FileLogger.h"
@@ -13,36 +14,19 @@
 
 class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
-	enum class LOCK_KIND : WORD {
-		FW = 1,
-		Adapter = 2
-	};
-	enum class LOCK_CHANGE : WORD {
-		None = 0,
-		Changed = 1
-	};
-	struct LOCK_INFO {
-		LOCK_KIND kind;
-		LOCK_CHANGE change;
-		ULONG ifIndex;
-		GUID adapterGuid;
-	};
-
 	~VRCIPv6BlockerApp();
 	static VRCIPv6BlockerApp* Instance();
 private:
 	std::wstring m_ModulePath;
 	std::wstring m_IniFile;
-	LOCK_INFO m_LockInfo = {};
 	Config m_Config;
 	BlockList m_BlockList;
+	std::unique_ptr<RuleController> m_pRule;
 	ydk::ComInitializer m_comInitializer;
 	CRITICAL_SECTION m_tCs;
 	CRITICAL_SECTION m_tidCs;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
-	std::unique_ptr<ydk::LockFile> m_pLockFile;
-	ydk::AdapterKey m_adapterKey = {};
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	LPWSTR* m_lpArgList;
 	unsigned __int64 m_Version;
@@ -61,8 +45,6 @@ private:
 	bool m_isAutoRun = false;
 	bool m_isVRCExecuted = false;
 	bool m_isStop = false;
-	bool m_isFirewallBlocked = false;
-	bool m_isIPv6Enabled = true;
 	bool m_isTaskExist = false;
 
 	static unsigned __stdcall VRCMonitoringThread(void* param);
@@ -82,23 +64,15 @@ private:
 	void ApplyDialogToConfig();
 	void ApplyConfigToDialog();
 	void CheckDialogControl();
-	void RevertBlock();
 	[[nodiscard]] DWORD GetVRChatProcess();
 	void VRCExecuter();
 	void SetStopFlag(bool isStop);
 	bool GetStopFlag();
 	void SetVRCProcessId(DWORD dwProcessId);
 	DWORD GetVRCProcessId();
-	bool IsFirewallRegistered();
-	void SetFirewall();
-	void RemoveFirewall();
-	bool SetIPv6(bool isEnable);
 	std::wstring SerializeGuid(const GUID& guid);
 	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid);
 	void WriteGuid(LPCWSTR lpGuid);
-	void CheckIPv6Setting();
-	bool ChangeFireWall();
-	bool ChangeIPv6();
 	void AutoStart();
 	void AutoExit();
 	bool CreateShortcut();
