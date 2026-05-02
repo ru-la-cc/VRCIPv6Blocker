@@ -4,7 +4,7 @@
 namespace ydk {
 	class ProcessWaiter final {
 	public:
-		ProcessWaiter(DWORD dwProcessId) {
+		ProcessWaiter(DWORD dwProcessId) noexcept {
 			m_hProcess = ::OpenProcess(
 				SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
 				FALSE,
@@ -27,7 +27,7 @@ namespace ydk {
 			m_exePath = nullptr;
 		}
 		[[nodiscard]] inline bool IsValid() const noexcept { return m_hProcess != nullptr; }
-		DWORD inline Wait(DWORD timeout = INFINITE) const noexcept {
+		DWORD Wait(DWORD timeout = INFINITE) const noexcept {
 			if (m_hProcess == nullptr) return WAIT_FAILED;
 			return ::WaitForSingleObject(m_hProcess, timeout);
 		}
@@ -35,7 +35,7 @@ namespace ydk {
 			if (m_hProcess == nullptr) return false;
 			return ::GetExitCodeProcess(m_hProcess, &exitCode);
 		}
-		inline LPCWSTR GetExePath() const { return m_exePath == nullptr ? L"" : m_exePath; }
+		LPCWSTR GetExePath() const { return m_exePath == nullptr ? L"" : m_exePath; }
 		ProcessWaiter(const ProcessWaiter&) = delete;
 		ProcessWaiter& operator=(const ProcessWaiter&) = delete;
 		ProcessWaiter(ProcessWaiter&&) = delete;

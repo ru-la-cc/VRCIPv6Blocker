@@ -24,6 +24,6 @@ namespace ydk {
 		AppMutex& operator=(AppMutex&&) = delete;
 
 		// これがtrueなら起動させない的なことをするなど
-		inline bool IsRunning() const noexcept{ return (m_hMutex == nullptr || m_Error == ERROR_ALREADY_EXISTS); }
+		bool IsRunning() const noexcept{ return (m_hMutex == nullptr || m_Error == ERROR_ALREADY_EXISTS); }
 	};
 }

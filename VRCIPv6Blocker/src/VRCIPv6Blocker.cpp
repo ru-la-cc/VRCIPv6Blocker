@@ -1,7 +1,5 @@
-﻿#include "ipv6conf.h"
+﻿#include "VRCIPv6Blocker.h"
 #include "WinFirewall.h"
-#include "taskman.h"
-#include "VRCIPv6Blocker.h"
 #include "YDKWinUtils.h"
 #include "SubClassEditHandler.h"
 #include "ProcessWaiter.h"
@@ -20,9 +18,9 @@
 #pragma comment(lib, "pathcch.lib")
 
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
-    // デストラクタ（コンストラクタはprivate↓）
-	::DeleteCriticalSection(&m_tidCs);
-	::DeleteCriticalSection(&m_tCs);
+    // デストラクタ（コンストラクタはprivateだから↓に書いてる）
+	//::DeleteCriticalSection(&m_tidCs);
+	::DeleteCriticalSection(&m_wCS);
 
 	if (m_lpArgList != nullptr) {
 		::LocalFree(m_lpArgList);
@@ -69,18 +67,13 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 		::MessageBoxW(m_hWnd, L"設定の読込に失敗しました\n詳細はログを確認してください", L"エラー", MB_ICONERROR | MB_OK);
 		throw;
 	}
-	m_pRule = std::make_unique<RuleController>((m_ModulePath + INPRG_FILE).c_str(), m_Logger, m_Config.GetConfig());
+	m_pRule = std::make_unique<RuleController>(
+		(m_ModulePath + INPRG_FILE).c_str(),
+		m_Logger, m_Config.GetConfig(),
+		m_BlockList.GetBlockList()
+	);
 	ApplyConfigToDialog();
-
-	SetVRCProcessId(GetVRChatProcess());
-
 	::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatのプロセスを確認しています...");
-	if (GetVRCProcessId()) {
-		m_Logger->LogWarning(L"VRChatが既に起動中");
-	}
-	else {
-		m_Logger->Log(L"VRChatは起動していません");
-	}
 
 	if (m_Config.GetConfig().uNonBlocking == BST_CHECKED) {
 		WCHAR szCaption[64];
@@ -92,16 +85,24 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 		::SetWindowTextW(m_hWnd, APP_NAME);
 	}
 
-	m_hMonThread = reinterpret_cast<HANDLE>(::_beginthreadex(nullptr, 0, VRCMonitoringThread, this, 0, nullptr));
-	if (m_hMonThread == nullptr) {
-		auto err = ydk::GetErrorMessage(::GetLastError());
-		m_Logger->LogError(L"監視用のワーカースレッドが起動できなかった...");
-		m_Logger->LogError((L"GetLastError = " + err).c_str());
-		::MessageBox(m_hWnd,
-			L"VRChatの監視スレッドが起動できませんでした\nたぶん役に立たないので閉じてください",
-			L"エラー",
-			MB_ICONERROR | MB_OK);
-	}
+	m_VRCProcess = std::make_unique<VRCProcess>(m_Config.GetConfig().strVRCFile.c_str(), m_Logger);
+	static VRCProcess::MonitorParams params{
+		m_VRCProcess.get(),
+		&m_Waiter,
+		&m_bStopFlag,
+		[hWnd = m_hWnd, pLogger = m_Logger](LPCWSTR lpText) {
+			if (!::PostMessageW(hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(lpText))) {
+				pLogger->LogError(L"メッセージのポストに失敗 : WM_SET_CTRLTEXT");
+			}
+		},
+		[hWnd = m_hWnd, pLogger = m_Logger](WPARAM wParam, LPARAM lParam) {
+			if (!::PostMessageW(hWnd, WM_VRCEXIT, wParam, lParam)) {
+				pLogger->LogError(L"メッセージのポストに失敗 : WM_VRCEXIT");
+			}
+		},
+		m_wCS
+	};
+	m_Worker.emplace(VRCProcess::VRCMonitorThread, &params);
 	if (m_pRule->IsRestore()) {
 		if (m_pRule->IsComplete()) {
 			::MessageBox(m_hWnd,
@@ -145,7 +146,7 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
     switch (LOWORD(wParam)) {
 	case IDC_BUTTON_RUNVRC:
 		::Sleep(100);
-		if (GetVRCProcessId()) {
+		if (m_VRCProcess->GetProcessID()) {
 			m_Logger->LogWarning(L"すでに起動中ですが");
 		}
 		else {
@@ -162,7 +163,7 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 				::MessageBox(m_hWnd, L"ファイアウォールのルールを削除できません", L"エラー", MB_ICONERROR | MB_OK);
 			}
 		} else {
-			if (m_pRule->ApplyFirewallRules(m_BlockList.GetBlockList())) {
+			if (m_pRule->ApplyFirewallRules()) {
 				::MessageBox(m_hWnd, L"ファイアウォールのルールを登録しました", L"通知", MB_ICONINFORMATION | MB_OK);
 			} else {
 				::MessageBox(m_hWnd, L"ファイアウォールのルールを登録できません", L"エラー", MB_ICONERROR | MB_OK);
@@ -243,29 +244,30 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 }
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
-	if (m_isAutoRun && (m_isVRCExecuted || m_hWaitThread != nullptr)) {
-		// VRChat起動中なのに閉じようとしたら一応警告を出す
-		if (::MessageBoxW(m_hWnd,
-			L"VRChatが起動中です！\n"
-			L"このアプリを終了するとIPv6の設定が元に戻り、一時的に通信が切れる場合があります\n"
-			L"それでもいいですか？",
-			L"警告",
-			MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES) return TRUE;
-	}
-	if (!m_isAutoRun && m_pRule->IsChange()) {
+	if (m_isAutoRun){
+		CSLock lock(m_wCS);
+		if (m_Waiter.has_value() &&
+			::WaitForSingleObject(m_Waiter.value().native_handle(), 0) == WAIT_TIMEOUT) {
+			// VRChat起動中なのに閉じようとしたら一応警告を出す
+			if (::MessageBoxW(m_hWnd,
+				L"VRChatが起動中です！\n"
+				L"このアプリを終了するとIPv6の設定が元に戻り、一時的に通信が切れる場合があります\n"
+				L"それでもいいですか？",
+				L"警告",
+				MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES) return TRUE;
+		}
+	} else if (m_pRule->IsChange()) {
 		if (::MessageBoxW(m_hWnd,
 			L"\n"
-			L"ファイアウォールまたはIPv6の状態が変更されています\n"
+			L"ファイアウォールまたはIPv6の設定が変更されています\n"
 			L"そのまま終了してもいいですか？",
 			L"確認！！",
 			MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES) return TRUE;
 	}
-	if (!GetStopFlag()) SetStopFlag(true);
-	if (m_hMonThread != nullptr) {
-		// 一応スレッド終了待ち
-		::WaitForSingleObject(m_hMonThread, INFINITE);
-		::CloseHandle(m_hMonThread);
-		m_hMonThread = nullptr;
+	if (m_Worker.has_value()) {
+		m_bStopFlag.store(true);
+		m_Worker.value().join();
+		m_Worker.reset();
 	}
 	if (m_isAutoRun) AutoExit();
 	else m_pRule->Cleanup();
@@ -284,19 +286,15 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 		return TRUE;
 	case WM_VRCEXIT:
 		if (wParam) {
-			m_Logger->LogError(L"VRChatが変な終わり方しました");
-		}
-		else {
+			m_Logger->LogError(L"VRChatが変な終わり方しました？");
+		} else {
 			WCHAR szLog[256];
 			::swprintf_s(szLog, L"VRChatが終了しました(終了コード:%lu)", static_cast<DWORD>(lParam));
 			m_Logger->Log(szLog);
 		}
-		if (m_hWaitThread != nullptr) {
-			::WaitForSingleObject(m_hWaitThread, INFINITE);
-			::CloseHandle(m_hWaitThread);
-			m_hWaitThread = nullptr;
-		}
-		if (m_isAutoRun && m_Config.GetConfig().uAutoShutdown == BST_CHECKED) {
+		if (!m_isAutoRun) {
+			::PostMessageW(m_hWnd, WM_ENABLE_CONTROL, static_cast<WPARAM>(TRUE), static_cast<LPARAM>(IDC_BUTTON_SAVE));
+		} else if (m_Config.GetConfig().uAutoShutdown == BST_CHECKED) {
 			m_Logger->Log(L"自動終了によりアプリの終了を開始します");
 			::SendMessage(m_hWnd, WM_CLOSE, 0, 0);
 		}
@@ -321,104 +319,6 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 }
 
 // private
-
-// ぶいちゃの起動状態を監視するワーカースレッド
-unsigned __stdcall VRCIPv6BlockerApp::VRCMonitoringThread(void* param) {
-	constexpr int SLEEP_CYCLES = 10;
-	ydk::ComInitializer comInitializer; // com使ってないと思うけど一応保険として入れておこう
-	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
-	app->SetStopFlag(false);
-	bool isRunning = false;
-	bool isInit = true;
-
-	app->m_Logger->Log(L"VRChatプロセス監視スレッドの開始");
-	while (!app->GetStopFlag()) {
-		if (app->GetVRCProcessId()) {
-			if (!isRunning) {
-				isRunning = true;
-				app->m_Logger->Log(L"VRChatのプロセスを検出しました");
-				::PostMessageW(app->m_hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(L"VRChat起動中"));
-			}
-		}
-		else {
-			if(isRunning || isInit) {
-				isRunning = false;
-				isInit = false;
-				::PostMessageW(app->m_hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(L"VRChatは起動していません"));
-			}
-		}
-		
-		app->SetVRCProcessId(app->GetVRChatProcess());
-		if (app->m_hWaitThread == nullptr && app->GetVRCProcessId()) {
-			app->m_hWaitThread = reinterpret_cast<HANDLE>(::_beginthreadex(nullptr, 0, ProcessExitNotifyThread, app, 0, nullptr));
-			if (app->m_hWaitThread == nullptr) {
-				auto err = ydk::GetErrorMessage(::GetLastError());
-				app->m_Logger->LogError(L"待機用のワーカースレッドが起動できなかった...");
-				app->m_Logger->LogError((L"GetLastError = " + err).c_str());
-				::PostMessageW(app->m_hWnd,
-					WM_ERR_MESSAGE,
-					0,
-					reinterpret_cast<LPARAM>(
-						L"VRChatの終了待機用スレッドが起動できませんでした\n"
-						L"なにもできないのでアプリを終了してください"
-					)
-				);
-				break;
-			}
-		}
-		for (int i = 0; i < SLEEP_CYCLES; ++i) { // プロセス監視するのは1秒おきくらいでいいと思ってる
-			if (app->GetStopFlag()) break;
-			::Sleep(app->PROCESS_MONITOR_INTERVAL);
-		}
-	}
-	app->m_Logger->Log(L"VRChatのプロセス監視スレッドを終了します");
-	return 0;
-}
-
-// ぶいちゃの終了を待つワーカースレッド
-unsigned __stdcall VRCIPv6BlockerApp::ProcessExitNotifyThread(void* param) {
-	ydk::ComInitializer comInitializer; // com使ってないと思うけど一応保険として入れておこう
-	auto app = reinterpret_cast<VRCIPv6BlockerApp*>(param);
-
-	ydk::ProcessWaiter pw(app->GetVRCProcessId());
-
-	auto result = pw.Wait(); // 起動してなかったらすぐ制御返すはず
-	if (!pw.IsValid()) {
-		app->m_Logger->LogError(L"VRChatのプロセスハンドル開けてないんだが？");
-	}
-	app->m_isVRCExecuted = false;
-	WCHAR szResult[128];
-	::swprintf_s(szResult, L"wait result = 0x%08X(%lu)", result, result);
-	app->m_Logger->Log(szResult);
-	app->SetVRCProcessId(0);
-	DWORD dwExitCode;
-	auto isSuccess = pw.ExitCode(dwExitCode);
-
-	// メッセージ送るところ
-	constexpr int MAX_RETRY = 10;
-	constexpr DWORD MAX_SLEEP = 1000;
-	int retry = 0;
-	DWORD dwSleepMs = 50;
-	while (!::PostMessageW(
-			app->m_hWnd, WM_VRCEXIT,
-			static_cast<WPARAM>(!isSuccess), // WPARAMはExitCode成功時に0を設定させたい
-			static_cast<LPARAM>(dwExitCode))) // WPARAMが0でなければこの値は未定義、つまり何なのか知らん
-	{
-		DWORD dwError = ::GetLastError();
-		if (dwError == ERROR_INVALID_WINDOW_HANDLE || dwError == ERROR_ACCESS_DENIED) {
-			app->m_Logger->LogError(ydk::GetErrorMessage(dwError).c_str());
-		}
-		if (++retry > MAX_RETRY) break;
-		::Sleep(dwSleepMs);
-		dwSleepMs *= 2;
-		if (dwSleepMs > MAX_SLEEP) dwSleepMs = MAX_SLEEP;
-	}
-	if (!app->m_isAutoRun) {
-		::PostMessageW(app->m_hWnd, WM_ENABLE_CONTROL, static_cast<WPARAM>(TRUE), static_cast<LPARAM>(IDC_BUTTON_SAVE));
-	}
-	app->m_Logger->Log(L"VRChatの待機スレッドを終了します");
-	return 0;
-}
 
 VRCIPv6BlockerApp* VRCIPv6BlockerApp::Instance() {
     static VRCIPv6BlockerApp app = VRCIPv6BlockerApp();
@@ -451,8 +351,8 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 	}
 	if (m_isAutoRun) m_Logger->Log(L"オートモードで起動しました");
 
-	::InitializeCriticalSection(&m_tCs);
-	::InitializeCriticalSection(&m_tidCs);
+	::InitializeCriticalSection(&m_wCS);
+	//::InitializeCriticalSection(&m_tidCs);
 }
 
 void VRCIPv6BlockerApp::ApplyDialogToConfig() {
@@ -508,77 +408,17 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 	::EnableWindow(::GetDlgItem(m_hWnd, IDC_BUTTON_DELTS), !m_isAutoRun && m_TaskScheduler->IsExists());
 }
 
-DWORD VRCIPv6BlockerApp::GetVRChatProcess() {
-	HANDLE hSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (hSnapshot == INVALID_HANDLE_VALUE) {
-		return 0;
-	}
-
-	PROCESSENTRY32W pe32;
-	pe32.dwSize = sizeof(PROCESSENTRY32W);
-
-	DWORD processId = 0;
-	auto& config = m_Config.GetConfig();
-	if (Process32FirstW(hSnapshot, &pe32)) {
-		do {
-			if (_wcsicmp(pe32.szExeFile,
-					config.strVRCFile.length() > 0 ?
-					config.strVRCFile.c_str() :
-					VRCFILENAME) == 0) {
-				processId = pe32.th32ProcessID;
-				break;
-			}
-		} while (Process32NextW(hSnapshot, &pe32));
-	}
-
-	CloseHandle(hSnapshot);
-	return processId;
-}
-
 void VRCIPv6BlockerApp::VRCExecuter() {
-	if (GetVRCProcessId()) {
-		m_Logger->LogError(L"既に起動してるので起動しないでほしい");
-		return;
-	}
-	auto pid = ydk::ShellExecuteWithLoginUser(m_Config.GetConfig().strExecutePath.c_str());
-	if (!pid) {
-		m_Logger->LogError(L"起動できませんでした");
-		::MessageBoxW(m_hWnd, L"起動できませんでした", L"エラー", MB_ICONERROR | MB_OK);
-	}
-	else {
-		WCHAR szMsg[256];
-		m_isVRCExecuted = true;
-		::swprintf_s(szMsg, L"プロセスID(%lu)で起動しました(ランチャーの可能性もあるからこのPIDは信用できん)", pid);
-		m_Logger->Log(szMsg);
+	switch (m_VRCProcess->UserExecute(m_Config.GetConfig().strExecutePath.c_str())) {
+	case 0:
+		break;
+	case 1:
 		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatの起動待ち...");
+		break;
+	default:
+		::MessageBoxW(m_hWnd, L"起動できませんでした", L"エラー", MB_ICONERROR | MB_OK);
+		break;
 	}
-}
-void VRCIPv6BlockerApp::SetStopFlag(bool isStop)
-{
-	::EnterCriticalSection(&m_tidCs);
-	m_isStop = isStop;
-	::LeaveCriticalSection(&m_tidCs);
-}
-
-bool VRCIPv6BlockerApp::GetStopFlag()
-{
-	::EnterCriticalSection(&m_tidCs);
-	bool isStop = m_isStop;
-	::LeaveCriticalSection(&m_tidCs);
-	return isStop;
-}
-
-void VRCIPv6BlockerApp::SetVRCProcessId(DWORD dwProcessId) {
-	::EnterCriticalSection(&m_tCs);
-	m_vrcProcessId = dwProcessId;
-	::LeaveCriticalSection(&m_tCs);
-}
-
-DWORD VRCIPv6BlockerApp::GetVRCProcessId() {
-	::EnterCriticalSection(&m_tCs);
-	DWORD result = m_vrcProcessId;
-	::LeaveCriticalSection(&m_tCs);
-	return result;
 }
 
 std::wstring VRCIPv6BlockerApp::SerializeGuid(const GUID& guid) {
@@ -609,15 +449,11 @@ void VRCIPv6BlockerApp::WriteGuid(LPCWSTR lpGuid) {
 void VRCIPv6BlockerApp::AutoStart() {
 	auto& config = m_Config.GetConfig();
 	if (config.uNonBlocking == BST_UNCHECKED) {
-		if (config.uFirewallBlock == BST_CHECKED) {
-			m_pRule->ApplyFirewallRules(m_BlockList.GetBlockList());
-		} else {
-			m_pRule->DisableIPv6();
-		}
+		m_pRule->ApplyBlock(config.uFirewallBlock == BST_CHECKED);
 	}
 
 	// まぁVRChatは起動しますけどね
-	if (GetVRCProcessId()) {
+	if (m_VRCProcess->GetProcessID()) {
 		m_Logger->LogWarning(L"VRChatはすでに起動中です");
 	}
 	else {
@@ -629,13 +465,7 @@ void VRCIPv6BlockerApp::AutoStart() {
 void VRCIPv6BlockerApp::AutoExit() {
 	auto& config = m_Config.GetConfig();
 	if (config.uNonBlocking == BST_UNCHECKED) {
-		if (config.uFirewallBlock == BST_CHECKED) {
-			if (m_pRule->RestoreFirewallRule()) {
-				m_Logger->Log(L"ファイアウォールのルールを戻しました");
-			}
-		} else {
-			m_pRule->RestoreIPv6();
-		}
+		m_pRule->Restore(config.uFirewallBlock == BST_CHECKED);
 	}
 }
 
