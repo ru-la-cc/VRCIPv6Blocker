@@ -2,14 +2,16 @@
 #include "YDKWinUtils.h"
 #include <tlhelp32.h>
 #include "UserProcessLauncher.h"
+#include "ScopedHandle.h"
 
 bool VRCProcess::FindProcess() {
-	struct SnapshotHandle final {
-		HANDLE handle;
-		SnapshotHandle() : handle(::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)) {}
-		~SnapshotHandle() { if (handle != INVALID_HANDLE_VALUE) ::CloseHandle(handle); }
-	} snapshot;
-	if (snapshot.handle == INVALID_HANDLE_VALUE) {
+	//struct SnapshotHandle final {
+	//	HANDLE handle;
+	//	SnapshotHandle() : handle(::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)) {}
+	//	~SnapshotHandle() { if (handle != INVALID_HANDLE_VALUE) ::CloseHandle(handle); }
+	//} snapshot;
+	ydk::ScopedHandle snapshot{ ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+	if (!snapshot.IsValid()) {
 		return false;
 	}
 
@@ -17,13 +19,13 @@ bool VRCProcess::FindProcess() {
 	pe32.dwSize = sizeof(PROCESSENTRY32W);
 
 	m_ProcessID = 0;
-	if (Process32FirstW(snapshot.handle, &pe32)) {
+	if (Process32FirstW(snapshot.Get(), &pe32)) {
 		do {
 			if (_wcsicmp(pe32.szExeFile, m_ExeFile.c_str()) == 0) {
 				m_ProcessID = pe32.th32ProcessID;
 				break;
 			}
-		} while (Process32NextW(snapshot.handle, &pe32));
+		} while (Process32NextW(snapshot.Get(), &pe32));
 	}
 	if (m_hProcess) {
 		if (!::CloseHandle(m_hProcess)) {
