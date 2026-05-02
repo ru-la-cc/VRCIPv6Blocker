@@ -143,6 +143,7 @@
     <ClInclude Include="src\defines.h" />
     <ClInclude Include="src\DialogBase.h" />
     <ClInclude Include="src\FileLogger.h" />
+    <ClInclude Include="src\ScopedHandle.h" />
     <ClInclude Include="src\vrcprocess.h" />
     <ClInclude Include="src\rulectrl.h" />
     <ClInclude Include="src\ILogger.h" />

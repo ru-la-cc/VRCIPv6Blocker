@@ -87,6 +87,9 @@
     <ClInclude Include="src\vrcprocess.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="src\ScopedHandle.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\DialogBase.cpp">
