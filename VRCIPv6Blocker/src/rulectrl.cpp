@@ -4,8 +4,14 @@
 #include "defines.h"
 #include "win32except.h"
 
-RuleController::RuleController(LPCWSTR lpLockFileName, ydk::ILogger<WCHAR>* logger, const Config::INI_CONFIG& config)
-	: m_LockFile(std::make_unique<ydk::LockFile>(lpLockFileName)), m_Logger(logger), m_conf(config) {
+RuleController::RuleController(
+	LPCWSTR lpLockFileName, ydk::ILogger<WCHAR>* logger,
+	const Config::INI_CONFIG& config,
+	const std::vector<std::wstring>& blockList)
+	: m_LockFile(std::make_unique<ydk::LockFile>(lpLockFileName)),
+	m_Logger(logger),
+	m_conf(config),
+	m_blockList(blockList) {
 	if (m_LockFile->IsExist()) {
 		// ロックファイルが存在したら、そこに復元するべき情報がある
 		m_Logger->LogWarning(L"アプリの異常終了を検出したため設定の復元を行います");
@@ -34,9 +40,28 @@ RuleController::RuleController(LPCWSTR lpLockFileName, ydk::ILogger<WCHAR>* logg
 		m_IsComplete = true;
 	}
 }
+bool RuleController::ApplyBlock(bool isFirewall) {
+	if (isFirewall) {
+		return ApplyFirewallRules();
+	} else {
+		return DisableIPv6();
+	}
+}
 
-bool RuleController::ApplyFirewallRules(const std::vector<std::wstring>& blockList) {
-	if (blockList.empty()) {
+bool RuleController::Restore(bool isFirewall) {
+	if (isFirewall) {
+		if (RestoreFirewallRule()) {
+			m_Logger->Log(L"ファイアウォールのルールを戻しました");
+			return true;
+		}
+		return false;
+	} else {
+		return RestoreIPv6();
+	}
+}
+
+bool RuleController::ApplyFirewallRules() {
+	if (m_blockList.empty()) {
 		m_Logger->LogError(L"有効なブロック対象アドレスがないため設定は行いません");
 		return false;
 	}
@@ -45,7 +70,7 @@ bool RuleController::ApplyFirewallRules(const std::vector<std::wstring>& blockLi
 	DWORD dwAttr = ::GetFileAttributesW(m_conf.strVRCFullPath.c_str());
 	if (!ydk::RegisterFirewallRule(
 		REGISTER_NAME,
-		blockList,
+		m_blockList,
 		nullptr,
 		L"VRChat IPv6 Block Rule",
 		(m_conf.uOnlyVRC == BST_UNCHECKED || dwAttr == INVALID_FILE_ATTRIBUTES || (dwAttr & FILE_ATTRIBUTE_DIRECTORY)) ?
@@ -71,7 +96,6 @@ bool RuleController::DisableIPv6() {
 
 	if (EnableIPv6(false)) {
 		m_LockFile->Lock(reinterpret_cast<LPCBYTE>(&m_LockInfo), sizeof(m_LockInfo));
-		m_Logger->Log(L"IPv6を無効化しました");
 		return true;
 	} else {
 		m_Logger->LogError(L"IPv6の無効化に失敗しました");

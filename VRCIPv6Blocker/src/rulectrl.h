@@ -24,13 +24,19 @@ public:
 		GUID adapterGuid;
 	};
 	RuleController() = delete;
-	RuleController(LPCWSTR lpLockFileName, ydk::ILogger<WCHAR>* logger, const Config::INI_CONFIG& config);
+	RuleController(
+		LPCWSTR lpLockFileName, ydk::ILogger<WCHAR>* logger,
+		const Config::INI_CONFIG& config,
+		const std::vector<std::wstring>& blockList
+	);
 	~RuleController() { m_LockFile->Unlock(); }
 	RuleController(const RuleController&) = delete;
 	RuleController& operator=(const RuleController&) = delete;
 	RuleController(RuleController&&) = delete;
 	RuleController& operator=(RuleController&&) = delete;
-	bool ApplyFirewallRules(const std::vector<std::wstring>& blockList);
+	bool ApplyBlock(bool isFirewall);
+	bool Restore(bool isFirewall);
+	bool ApplyFirewallRules();
 	bool DisableIPv6();
 	bool RestoreFirewallRule();
 	bool RestoreIPv6();
@@ -49,6 +55,7 @@ private:
 	std::unique_ptr<ydk::LockFile> m_LockFile;
 	ydk::ILogger<WCHAR>* m_Logger;
 	const Config::INI_CONFIG& m_conf;
+	const std::vector<std::wstring>& m_blockList;
 	LOCK_INFO m_LockInfo = {};
 	mutable ydk::AdapterKey m_AdapterKey = {};
 	bool IsExistsFirewallRule() const;

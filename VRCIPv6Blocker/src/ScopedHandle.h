@@ -33,7 +33,7 @@ namespace ydk {
 			}
 			return *this;
 		}
-		bool IsValid() const noexcept { return m_handle != Traits::Invalid(); }
+		[[nodiscard]] bool IsValid() const noexcept { return m_handle != Traits::Invalid(); }
 		Traits::HandleType Get() const noexcept { return m_handle; }
 		void Close() noexcept {
 			if (m_handle != Traits::Invalid()) Traits::Close(m_handle);
