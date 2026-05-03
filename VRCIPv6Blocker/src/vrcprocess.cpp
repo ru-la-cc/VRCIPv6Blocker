@@ -92,6 +92,7 @@ void VRCProcess::VRCMonitorThread(MonitorParams* params) {
 		}
 
 		if (isRunning) {
+			CSLock lock(params->cs);
 			if (!params->waiter->has_value()) {
 				params->waiter->emplace(VRCWaitThread, params->vrcp, params->vrcp->m_Logger, params->vrcexit, params->stopflag);
 			}

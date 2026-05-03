@@ -41,11 +41,6 @@ private:
 	LPWSTR* m_lpArgList;
 	unsigned __int64 m_Version;
 
-	HANDLE m_hMonThread = nullptr;
-	HANDLE m_hWaitThread = nullptr;
-
-	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
-	DWORD m_vrcProcessId = 0;
 	static constexpr UINT WM_VRCEXIT = WM_APP + 1;
 	static constexpr UINT WM_SET_CTRLTEXT = WM_APP + 2;
 	static constexpr UINT WM_ERR_MESSAGE = WM_APP + 3;
