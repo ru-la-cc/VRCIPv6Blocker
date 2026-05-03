@@ -285,7 +285,7 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 	case WM_SHOWWINDOW:
 		if (m_isAutoRun && wParam && m_Config.GetConfig().uMinWindow == BST_CHECKED) {
 			m_Logger->Log(L"最小化します");
-			::SendMessage(m_hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+			::PostMessage(m_hWnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
 		}
 		return TRUE;
 	case WM_VRCEXIT:
@@ -300,7 +300,7 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 			::PostMessageW(m_hWnd, WM_ENABLE_CONTROL, static_cast<WPARAM>(TRUE), static_cast<LPARAM>(IDC_BUTTON_SAVE));
 		} else if (m_Config.GetConfig().uAutoShutdown == BST_CHECKED) {
 			m_Logger->Log(L"自動終了によりアプリの終了を開始します");
-			::SendMessage(m_hWnd, WM_CLOSE, 0, 0);
+			::PostMessage(m_hWnd, WM_CLOSE, 0, 0);
 		}
 		return TRUE;
 	case WM_SET_CTRLTEXT:
