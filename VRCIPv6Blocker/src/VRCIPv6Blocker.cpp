@@ -14,6 +14,8 @@
 #pragma comment(lib, "Comdlg32.lib")
 #pragma comment(lib, "pathcch.lib")
 
+std::exception_ptr VRCIPv6BlockerApp::m_Exception = nullptr;
+
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
     // コンストラクタはprivateだから下の方に書いてる
 	::DeleteCriticalSection(&m_wCS);
@@ -36,87 +38,93 @@ void VRCIPv6BlockerApp::OnShutdown() {
 INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
     // 基底クラスの処理
     ydk::DialogAppBase::OnInitDialog(hDlg);
-    // まぁこのあたりに初期化処理を書く予定
-	m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
-	m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
-	m_TaskScheduler = std::make_unique<IPv6BlockScheduler>(m_Logger);
-	WORD v1, v2, v3, v4;
-	ydk::GetAppVersion(&v1, &v2, &v3, &v4);
-	m_Version = (static_cast<unsigned __int64>(v1) << 48) |
-		(static_cast<unsigned __int64>(v2) << 32) |
-		(static_cast<unsigned __int64>(v3) << 16) |
-		(static_cast<unsigned __int64>(v4) << 0);
-	WCHAR szVer[64];
-	::swprintf_s(szVer, L"Ver. %u.%u.%u(%u)", v1, v2, v3, v4);
-	::SetDlgItemTextW(m_hWnd, IDC_STATIC_VERSION, szVer);
-
-	if (!m_BlockList.LoadFromFile((m_ModulePath + BLOCK_LIST_FILE).c_str(), m_Logger)) {
-		::MessageBoxW(m_hWnd, L"ブロックリストの読込に失敗しました\n詳細はログを確認してください", L"エラー", MB_ICONERROR | MB_OK);
-	}
-
 	try {
-		m_Config.Load();
-	}
-	catch (const ydk::Win32Exception& ex) {
-		m_Logger->LogError(L"設定の読込に失敗しました");
-		m_Logger->LogError(ex.what_w());
-		::MessageBoxW(m_hWnd, L"設定の読込に失敗しました\n詳細はログを確認してください", L"エラー", MB_ICONERROR | MB_OK);
-		throw;
-	}
-	m_pRule = std::make_unique<RuleController>(
-		(m_ModulePath + INPRG_FILE).c_str(),
-		m_Logger, m_Config.GetConfig(),
-		m_BlockList.GetBlockList()
-	);
-	ApplyConfigToDialog();
-	::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatのプロセスを確認しています...");
+		// まぁこのあたりに初期化処理を書く予定
+		m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
+		m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
+		m_TaskScheduler = std::make_unique<IPv6BlockScheduler>(m_Logger);
+		WORD v1, v2, v3, v4;
+		ydk::GetAppVersion(&v1, &v2, &v3, &v4);
+		m_Version = (static_cast<unsigned __int64>(v1) << 48) |
+			(static_cast<unsigned __int64>(v2) << 32) |
+			(static_cast<unsigned __int64>(v3) << 16) |
+			(static_cast<unsigned __int64>(v4) << 0);
+		WCHAR szVer[64];
+		::swprintf_s(szVer, L"Ver. %u.%u.%u(%u)", v1, v2, v3, v4);
+		::SetDlgItemTextW(m_hWnd, IDC_STATIC_VERSION, szVer);
 
-	if (m_Config.GetConfig().uNonBlocking == BST_CHECKED) {
-		WCHAR szCaption[64];
-		::swprintf_s(szCaption, L"%s (NonBlock)", APP_NAME);
-		::SetWindowTextW(m_hWnd, szCaption);
-		m_Logger->LogWarning(L"IPv6をブロックしないアプリ名と相反する動作をします");
-	}
-	else {
-		::SetWindowTextW(m_hWnd, APP_NAME);
-	}
+		if (!m_BlockList.LoadFromFile((m_ModulePath + BLOCK_LIST_FILE).c_str(), m_Logger)) {
+			::MessageBoxW(m_hWnd, L"ブロックリストの読込に失敗しました\n詳細はログを確認してください", L"エラー", MB_ICONERROR | MB_OK);
+		}
 
-	m_VRCProcess = std::make_unique<VRCProcess>(m_Config.GetConfig().strVRCFile.c_str(), m_Logger);
-	static VRCProcess::MonitorParams params{
-		m_VRCProcess.get(),
-		&m_Waiter,
-		&m_bStopFlag,
-		[hWnd = m_hWnd, pLogger = m_Logger](LPCWSTR lpText) {
-			if (!::PostMessageW(hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(lpText))) {
-				pLogger->LogError(L"メッセージのポストに失敗 : WM_SET_CTRLTEXT");
-			}
-		},
-		[hWnd = m_hWnd, pLogger = m_Logger](WPARAM wParam, LPARAM lParam) {
-			if (!::PostMessageW(hWnd, WM_VRCEXIT, wParam, lParam)) {
-				pLogger->LogError(L"メッセージのポストに失敗 : WM_VRCEXIT");
-			}
-		},
-		m_wCS
-	};
-	m_Worker.emplace(VRCProcess::VRCMonitorThread, &params);
-	if (m_pRule->IsRestore()) {
-		if (m_pRule->IsComplete()) {
-			::MessageBox(m_hWnd,
-				L"アプリの異常終了を検出したため、設定を復元しました",
-				L"報告",
-				MB_ICONWARNING | MB_OK);
+		try {
+			m_Config.Load();
+		}
+		catch (const ydk::Win32Exception& ex) {
+			m_Logger->LogError(L"設定の読込に失敗しました");
+			m_Logger->LogError(ex.what_w());
+			::MessageBoxW(m_hWnd, L"設定の読込に失敗しました\n詳細はログを確認してください", L"エラー", MB_ICONERROR | MB_OK);
+			throw;
+		}
+		m_pRule = std::make_unique<RuleController>(
+			(m_ModulePath + INPRG_FILE).c_str(),
+			m_Logger, m_Config.GetConfig(),
+			m_BlockList.GetBlockList()
+		);
+		ApplyConfigToDialog();
+		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatのプロセスを確認しています...");
+
+		if (m_Config.GetConfig().uNonBlocking == BST_CHECKED) {
+			WCHAR szCaption[64];
+			::swprintf_s(szCaption, L"%s (NonBlock)", APP_NAME);
+			::SetWindowTextW(m_hWnd, szCaption);
+			m_Logger->LogWarning(L"IPv6をブロックしないアプリ名と相反する動作をします");
 		}
 		else {
-			throw ydk::YDKException(
-				(L"アプリの異常終了を検出したため、復元を試みましたが復元に失敗しました。\n"
-				L"ファイアウォールやIPv6の設定を確認し、以下のファイルを削除してから再度起動してください\n"
-				+ (m_ModulePath + INPRG_FILE)).c_str()
-			);
+			::SetWindowTextW(m_hWnd, APP_NAME);
 		}
-	}
 
-	// 自動実行の場合は
-	if(m_isAutoRun) AutoStart();
+		m_VRCProcess = std::make_unique<VRCProcess>(m_Config.GetConfig().strVRCFile.c_str(), m_Logger);
+		static VRCProcess::MonitorParams params{
+			m_VRCProcess.get(),
+			&m_Waiter,
+			&m_bStopFlag,
+			[hWnd = m_hWnd, pLogger = m_Logger](LPCWSTR lpText) {
+				if (!::PostMessageW(hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(lpText))) {
+					pLogger->LogError(L"メッセージのポストに失敗 : WM_SET_CTRLTEXT");
+				}
+			},
+			[hWnd = m_hWnd, pLogger = m_Logger](WPARAM wParam, LPARAM lParam) {
+				if (!::PostMessageW(hWnd, WM_VRCEXIT, wParam, lParam)) {
+					pLogger->LogError(L"メッセージのポストに失敗 : WM_VRCEXIT");
+				}
+			},
+			m_wCS
+		};
+		m_Worker.emplace(VRCProcess::VRCMonitorThread, &params);
+		if (m_pRule->IsRestore()) {
+			if (m_pRule->IsComplete()) {
+				::MessageBox(m_hWnd,
+					L"アプリの異常終了を検出したため、設定を復元しました",
+					L"報告",
+					MB_ICONWARNING | MB_OK);
+			}
+			else {
+				throw ydk::YDKException(
+					(L"アプリの異常終了を検出したため、復元を試みましたが復元に失敗しました。\n"
+						L"ファイアウォールやIPv6の設定を確認し、以下のファイルを削除してから再度起動してください\n"
+						+ (m_ModulePath + INPRG_FILE)).c_str()
+				);
+			}
+		}
+
+		// 自動実行の場合は
+		if (m_isAutoRun) AutoStart();
+	}
+	catch (...) {
+		m_Exception = std::current_exception();
+		::PostMessage(m_hWnd, WM_CLOSE, 0, 0L);
+	}
     return TRUE;
 }
 
@@ -341,8 +349,9 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 		m_Logger->LogError(L"コマンドライン引数の読込に失敗しました");
 	}
 	else {
+		m_isAutoRun = false;
 		for (int i = 0; i < m_argc; ++i) {
-			m_isAutoRun = std::wcscmp(m_lpArgList[i], ARG_AUTORUN) == 0;
+			m_isAutoRun |= std::wcscmp(m_lpArgList[i], ARG_AUTORUN) == 0;
 		}
 	}
 	if (m_isAutoRun) m_Logger->Log(L"オートモードで起動しました");

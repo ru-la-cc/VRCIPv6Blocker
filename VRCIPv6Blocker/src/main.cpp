@@ -24,6 +24,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_  HINSTANCE hPrevInstanc
 	int result = 0;
 	try {
 		result = app->Run();
+		if (app->m_Exception) {
+			std::rethrow_exception(app->m_Exception);
+		}
 	}
 	catch (const ydk::Win32Exception& ex) {
 		::MessageBoxW(nullptr,
