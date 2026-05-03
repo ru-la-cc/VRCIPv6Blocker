@@ -20,6 +20,7 @@ class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
 	~VRCIPv6BlockerApp();
 	static VRCIPv6BlockerApp* Instance();
+	static std::exception_ptr m_Exception;
 private:
 	std::wstring m_ModulePath;
 	std::wstring m_IniFile;
