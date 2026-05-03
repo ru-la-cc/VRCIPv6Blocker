@@ -113,7 +113,7 @@ namespace ydk {
 		return S_OK;
 	}
 
-	// トリガ無し（オンデマンド）
+	// トリガ無し
 	HRESULT RegisterTaskScheduler(const wchar_t* taskName,
 		const wchar_t* exePath,
 		const wchar_t* arguments,
