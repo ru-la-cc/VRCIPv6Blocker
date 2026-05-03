@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "rulectrl.h"
-#include "ipv6conf.h"
 #include "DialogBase.h"
 #include "FileLogger.h"
 #include "ISubclass.h"
@@ -9,7 +8,6 @@
 #include "config.h"
 #include "blocklist.h"
 #include "tasksc.h"
-#include <vector>
 #include <optional>
 #include <thread>
 #include <atomic>
@@ -71,9 +69,6 @@ private:
 	void ApplyConfigToDialog();
 	void CheckDialogControl();
 	void VRCExecuter();
-	std::wstring SerializeGuid(const GUID& guid);
-	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid);
-	void WriteGuid(LPCWSTR lpGuid);
 	void AutoStart();
 	void AutoExit();
 	void CreateShortcut();
