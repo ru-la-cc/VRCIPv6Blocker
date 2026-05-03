@@ -34,7 +34,6 @@ namespace ydk {
 
 	int ToUtf8(LPCWSTR lpUtf16, LPSTR lpUtf8, int buflen) {
 		if (lpUtf8 != nullptr && buflen < 1) {
-			lpUtf8[0] = '\0';
 			return 0;
 		}
 
@@ -45,11 +44,19 @@ namespace ydk {
 
 	int ToUtf16(LPCSTR lpUtf8, LPWSTR lpUtf16, int buflen) {
 		if (lpUtf16 != nullptr && buflen < 1) {
-			lpUtf16[0] = L'\0';
 			return 0;
 		}
 		int result = ::MultiByteToWideChar(CP_UTF8, 0, lpUtf8, -1, lpUtf16, buflen);
 		if(lpUtf16 != nullptr) lpUtf16[buflen - 1] = L'\0';
+		return result;
+	}
+
+	std::string To_Multibyte(LPCWSTR message) {
+		if (!message) return std::string();
+		int size = ydk::GetToUtf8Size(message);
+		if (size <= 0) return std::string();
+		std::string result(size, '\0');
+		ToUtf8(message, result.data(), size);
 		return result;
 	}
 
@@ -105,7 +112,7 @@ namespace ydk {
 	}
 
 	std::wstring GetErrorMessage(DWORD dwError) {
-		WCHAR szMessage[1024];
+		WCHAR szMessage[256];
 		std::wstring resultMessage;
 
 		if (::FormatMessageW(
@@ -117,7 +124,7 @@ namespace ydk {
 				szMessage,
 				std::size(szMessage),
 				nullptr)) {
-			szMessage[std::size(szMessage) - 1] = L'\0'; // バッファオーバーしても\0つくかわからんし失敗として戻るのかわからんから保険的に...
+			szMessage[std::size(szMessage) - 1] = L'\0'; // 保険
 		}
 		else {
 			// しかしエラーメッセージ取りに行く処理でエラーになるとか滑稽だな
@@ -317,7 +324,7 @@ namespace ydk {
 	}
 
 	bool GetKnownFolderPath(std::wstring& path, KNOWNFOLDERID folderId) {
-		PWSTR pPath;
+		PWSTR pPath = nullptr;
 
 		HRESULT hr = ::SHGetKnownFolderPath(
 			folderId,

@@ -1,89 +1,54 @@
 ﻿#pragma once
-#include "ipv6conf.h"
+#include "rulectrl.h"
 #include "DialogBase.h"
 #include "FileLogger.h"
 #include "ISubclass.h"
 #include "ComInitializer.h"
-#include <vector>
+#include "lockfile.h"
+#include "config.h"
+#include "blocklist.h"
+#include "tasksc.h"
+#include <optional>
+#include <thread>
+#include <atomic>
+#include "vrcprocess.h"
+#include "defines.h"
 #include "../resource.h"
 
-#define APP_GUID L"{31952356-61C8-42F9-9D19-AC73E9AF5ED5}"
-#define APP_NAME L"VRCIPv6Blocker"
-
+// このクラスのインスタンスはstaticなのでライフタイムとか気にしたら負け
 class VRCIPv6BlockerApp final : public ydk::DialogAppBase {
 public:
-	struct INI_SETTING {
-		unsigned __int64 ullVersion;
-		UINT uRunVRC;
-		UINT uAutoShutdown;
-		UINT uMinWindow;
-		UINT uFirewallBlock;
-		UINT uNonBlocking;
-		UINT uRevert;
-		UINT uOnlyVRC;
-		std::wstring strExecutePath;
-		std::wstring strVRCFile;
-		std::wstring strDestIp;
-		std::wstring strNIC;
-		std::wstring strVRCFullPath;
-	};
-
 	~VRCIPv6BlockerApp();
 	static VRCIPv6BlockerApp* Instance();
+	static std::exception_ptr m_Exception;
 private:
-	std::vector<std::wstring> m_BlockList;
 	std::wstring m_ModulePath;
 	std::wstring m_IniFile;
-	INI_SETTING m_Setting = {};
+	Config m_Config;
+	BlockList m_BlockList;
+	std::unique_ptr<RuleController> m_pRule;
+	std::unique_ptr<IPv6BlockScheduler> m_TaskScheduler;
+	std::unique_ptr<VRCProcess> m_VRCProcess;
 	ydk::ComInitializer m_comInitializer;
-	CRITICAL_SECTION m_tCs;
-	CRITICAL_SECTION m_tidCs;
+	CRITICAL_SECTION m_wCS;
+	//CRITICAL_SECTION m_tidCs;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
-	ydk::AdapterKey m_adapterKey = {};
+	std::optional<std::thread> m_Worker;
+	std::optional<std::thread> m_Waiter;
+	std::atomic<bool> m_bStopFlag;
+
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	LPWSTR* m_lpArgList;
 	unsigned __int64 m_Version;
 
-	LPCWSTR logFileName = L"VRCIPv6Blocker.log";
-	LPCWSTR VRCFILENAME = L"VRChat.exe";
-	static constexpr LPCWSTR REGISTER_NAME = APP_GUID L"_" APP_NAME;
-	LPCWSTR BLOCK_LIST_FILE = L"blocklist.txt";
-	LPCWSTR IK_VERSION = L"Version";
-	LPCWSTR IK_RUNVRC = L"RunVRC";
-	LPCWSTR IK_AUTOSHUTDOWN = L"AutoShutdown";
-	LPCWSTR IK_MINWINDOW = L"MinWindow";
-	LPCWSTR IK_FIREWALLBLOCK = L"FirewallBlock";
-	LPCWSTR IK_EXECUTEPATH = L"Execute";
-	LPCWSTR IK_NONBLOCKING = L"NonBlocking";
-	LPCWSTR IK_REVERT = L"Revert";
-	LPCWSTR IK_ONLYVRC = L"OnlyVRC";
-	LPCWSTR IK_VRCFILE = L"VRCFile";
-	LPCWSTR IK_DESTIP = L"DestIp";
-	LPCWSTR IK_NIC = L"NIC";
-	LPCWSTR IK_VRCFULLPATH = L"VRCFullPath";
-	LPCWSTR ARG_AUTORUN = L"-autorun";
-
-	HANDLE m_hMonThread = nullptr;
-	HANDLE m_hWaitThread = nullptr;
-
-	const DWORD PROCESS_MONITOR_INTERVAL = 100UL;
-	DWORD m_vrcProcessId = 0;
-	static inline constexpr UINT WM_VRCEXIT = WM_APP + 1;
-	static inline constexpr UINT WM_SET_CTRLTEXT = WM_APP + 2;
-	static inline constexpr UINT WM_ERR_MESSAGE = WM_APP + 3;
-	static inline constexpr UINT WM_WRITE_VRCFULLPATH = WM_APP + 4;
-	static inline constexpr UINT WM_ENABLE_CONTROL = WM_APP + 5;
+	static constexpr UINT WM_VRCEXIT = WM_APP + 1;
+	static constexpr UINT WM_SET_CTRLTEXT = WM_APP + 2;
+	static constexpr UINT WM_ERR_MESSAGE = WM_APP + 3;
+	static constexpr UINT WM_WRITE_VRCFULLPATH = WM_APP + 4;
+	static constexpr UINT WM_ENABLE_CONTROL = WM_APP + 5;
 	int m_argc;
 	bool m_isAutoRun = false;
-	bool m_isVRCExecuted = false;
-	bool m_isStop = false;
-	bool m_isFirewallBlocked = false;
-	bool m_isIPv6Enabled = true;
-	bool m_isTaskExist = false;
-
-	static unsigned __stdcall VRCMonitoringThread(void* param);
-	static unsigned __stdcall ProcessExitNotifyThread(void* param);
 
 	VRCIPv6BlockerApp();
 
@@ -96,37 +61,19 @@ private:
 	INT_PTR OnClose(HWND hDlg) override;
 	INT_PTR HandleMessage(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) override;
 
-	void LoadBlockList();
-	void LoadSetting();
-	bool SaveSetting();
-	void GetSetting();
-	void SetSetting();
-	void DumpSetting();
+	void ApplyDialogToConfig();
+	void ApplyConfigToDialog();
 	void CheckDialogControl();
-	[[nodiscard]] DWORD GetVRChatProcess();
 	void VRCExecuter();
-	void SetStopFlag(bool isStop);
-	bool GetStopFlag();
-	void SetVRCProcessId(DWORD dwProcessId);
-	DWORD GetVRCProcessId();
-	bool IsFirewallRegistered();
-	void SetFirewall();
-	void RemoveFirewall();
-	bool SetIPv6(bool isEnable);
-	std::wstring SerializeGuid(const GUID& guid);
-	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid);
-	void WriteGuid(LPCWSTR lpGuid);
-	void CheckIPv6Setting();
-	void ChangeFireWall();
-	void ChangeIPv6();
 	void AutoStart();
 	void AutoExit();
-	bool CreateShortcut();
-	void CreateScheduledTaskWithShortcut();
-	void DeleteTask();
+	void WaitWorker();
+	void CreateShortcut();
+	void OnClickMakeLinkButton();
+	void OnClickDeleteTask();
 
 	void WriteExePath();
-	// ---------------------------- 以下、使ってないけど残しておく
+	// ---------------------------- 以下、現時点では使用していない
 	std::wstring GetLinkPath(LPCWSTR lpLinkFile);
 	bool GetExeFilePath(LPCWSTR lpLaunchPath, std::wstring& exePath);
 };

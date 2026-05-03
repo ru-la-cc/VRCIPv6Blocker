@@ -18,13 +18,12 @@ namespace ydk {
 			m_Error = 0;
 		}
 
-		// こんなんコピーやムーブするかぁ...?
 		AppMutex(const AppMutex&) = delete;
 		AppMutex& operator=(const AppMutex&) = delete;
 		AppMutex(AppMutex&&) = delete;
 		AppMutex& operator=(AppMutex&&) = delete;
 
 		// これがtrueなら起動させない的なことをするなど
-		inline bool IsRunning() const noexcept{ return (m_hMutex == nullptr || m_Error == ERROR_ALREADY_EXISTS); }
+		bool IsRunning() const noexcept{ return (m_hMutex == nullptr || m_Error == ERROR_ALREADY_EXISTS); }
 	};
 }

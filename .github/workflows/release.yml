@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57
+
+      - name: Build
+        run: msbuild VRCIPv6Blocker.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Create zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path _package/VRCIPv6Blocker
+          Copy-Item x64/Release/VRCIPv6Blocker.exe _package/VRCIPv6Blocker/
+          Copy-Item docs/assets/blocklist.txt _package/VRCIPv6Blocker/
+          Copy-Item docs/assets/user-guide.pdf _package/VRCIPv6Blocker/
+          Copy-Item docs/assets/readme.txt _package/VRCIPv6Blocker/
+          Compress-Archive -Path _package/VRCIPv6Blocker -DestinationPath "VRCIPv6Blocker_${{ github.ref_name }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: VRCIPv6Blocker_${{ github.ref_name }}.zip
+
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: package
+
+      - name: Create Release
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe
+        with:
+          files: VRCIPv6Blocker_${{ github.ref_name }}.zip

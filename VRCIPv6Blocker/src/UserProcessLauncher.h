@@ -10,10 +10,10 @@ namespace ydk{
 		Unresolvable
 	};
 
-
-	constexpr LPCWSTR WhiteListExt[] = {
+	inline constexpr LPCWSTR WhiteListExt[] = {
 		L".exe", L".lnk", L".url", L".bat", L".cmd", L".com", L".msi", L".scr"
 	};
+
 	// .lnk の解決
 	bool GetExecutableFromLnk(
 		const std::wstring& lnkPath,
