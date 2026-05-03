@@ -42,7 +42,7 @@ bool BlockList::LoadFromFile(LPCWSTR lpFileName, ydk::ILogger<WCHAR>* logger) {
 				break;
 			}
 		}
-		if (isSkip) continue;
+		if (isSkip || !isRead) continue;
 		char* pt;
 		for (pt = ps + std::strlen(ps) - 1; pt > ps; --pt) {
 			if (*pt == ' ' || *pt == '\t') continue;

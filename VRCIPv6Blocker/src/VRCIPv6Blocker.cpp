@@ -57,7 +57,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 	try {
 		m_Config.Load();
 	}
-	catch (const ydk::Win32Exception ex) {
+	catch (const ydk::Win32Exception& ex) {
 		m_Logger->LogError(L"設定の読込に失敗しました");
 		m_Logger->LogError(ex.what_w());
 		::MessageBoxW(m_hWnd, L"設定の読込に失敗しました\n詳細はログを確認してください", L"エラー", MB_ICONERROR | MB_OK);
