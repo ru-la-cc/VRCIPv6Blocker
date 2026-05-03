@@ -248,6 +248,10 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 }
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
+	if (m_Exception) {
+		WaitWorker();
+		return ydk::DialogAppBase::OnClose(hDlg);
+	}
 	if (m_isAutoRun){
 		CSLock lock(m_wCS);
 		if (m_Waiter.has_value() &&
@@ -268,11 +272,7 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 			L"確認！！",
 			MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES) return TRUE;
 	}
-	if (m_Worker.has_value()) {
-		m_bStopFlag.store(true);
-		m_Worker.value().join();
-		m_Worker.reset();
-	}
+	WaitWorker();
 	if (m_isAutoRun) AutoExit();
 	else m_pRule->Cleanup();
     return ydk::DialogAppBase::OnClose(hDlg);
@@ -445,6 +445,14 @@ void VRCIPv6BlockerApp::AutoExit() {
 	auto& config = m_Config.GetConfig();
 	if (config.uNonBlocking == BST_UNCHECKED) {
 		m_pRule->Restore(config.uFirewallBlock == BST_CHECKED);
+	}
+}
+
+void VRCIPv6BlockerApp::WaitWorker() {
+	if (m_Worker.has_value()) {
+		m_bStopFlag.store(true);
+		m_Worker.value().join();
+		m_Worker.reset();
 	}
 }
 
