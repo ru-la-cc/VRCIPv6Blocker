@@ -13,12 +13,10 @@ void Config::Save() {
 	WriteKey(IK_MINWINDOW, m_IniConfig.uMinWindow, L"%u");
 	WriteKey(IK_FIREWALLBLOCK, m_IniConfig.uFirewallBlock, L"%u");
 	WriteKey(IK_NONBLOCKING, m_IniConfig.uNonBlocking, L"%u");
-	//WriteKey(IK_REVERT, m_IniConfig.uRevert, L"%u");
 	WriteKey(IK_ONLYVRC, m_IniConfig.uOnlyVRC, L"%u");
 	WriteKey(IK_EXECUTEPATH, m_IniConfig.strExecutePath.c_str());
 	WriteKey(IK_VRCFILE, m_IniConfig.strVRCFile.c_str());
 	WriteKey(IK_DESTIP, m_IniConfig.strDestIp.c_str());
-	//WriteKey(IK_NIC, m_IniConfig.strNIC.c_str());
 	WriteKey(IK_VRCFULLPATH, m_IniConfig.strVRCFullPath.c_str());
 }
 
@@ -28,7 +26,6 @@ void Config::Load() {
 	m_IniConfig.uMinWindow = ::GetPrivateProfileIntW(APP_NAME, IK_MINWINDOW, BST_UNCHECKED, m_IniFile.c_str());
 	m_IniConfig.uFirewallBlock = ::GetPrivateProfileIntW(APP_NAME, IK_FIREWALLBLOCK, BST_CHECKED, m_IniFile.c_str());
 	m_IniConfig.uNonBlocking = ::GetPrivateProfileIntW(APP_NAME, IK_NONBLOCKING, BST_UNCHECKED, m_IniFile.c_str());
-	//m_IniConfig.uRevert = ::GetPrivateProfileIntW(APP_NAME, IK_REVERT, BST_UNCHECKED, m_IniFile.c_str());
 	m_IniConfig.uOnlyVRC = ::GetPrivateProfileIntW(APP_NAME, IK_ONLYVRC, BST_UNCHECKED, m_IniFile.c_str());
 
 	WCHAR szBuf[MAX_PATH];
@@ -41,7 +38,6 @@ void Config::Load() {
 	LoadKeyString(szBuf, std::size(szBuf), IK_EXECUTEPATH, m_IniConfig.strExecutePath);
 	LoadKeyString(szBuf, std::size(szBuf), IK_VRCFILE, m_IniConfig.strVRCFile, VRCFILENAME);
 	LoadKeyString(szBuf, std::size(szBuf), IK_DESTIP, m_IniConfig.strDestIp, DEF_GATEWAY_HINT_IP);
-	//LoadKeyString(szBuf, std::size(szBuf), IK_NIC, m_IniConfig.strNIC);
 	LoadKeyString(szBuf, std::size(szBuf), IK_VRCFULLPATH, m_IniConfig.strVRCFullPath);
 #ifdef _DEBUG
 	DebugLog();
@@ -53,14 +49,13 @@ void Config::DebugLog() const {
 	WCHAR szLog[384];
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
-		L"IniConfig : Ver(%llu), uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u), uRevert(%u), uOnlyVRC(%u)",
+		L"IniConfig : Ver(%llu), uRunVRC(%u), uAutoShutdown(%u), uMinWindow(%u), uFirewallBlock(%u), uNonBlocking(%u), uOnlyVRC(%u)",
 		m_IniConfig.ullVersion,
 		m_IniConfig.uRunVRC,
 		m_IniConfig.uAutoShutdown,
 		m_IniConfig.uMinWindow,
 		m_IniConfig.uFirewallBlock,
 		m_IniConfig.uNonBlocking,
-		//m_IniConfig.uRevert,
 		m_IniConfig.uOnlyVRC);
 	Log(szLog);
 
@@ -81,12 +76,6 @@ void Config::DebugLog() const {
 		L"IniConfig : strDestIp=%s",
 		m_IniConfig.strDestIp.c_str());
 	Log(szLog);
-
-	//::StringCchPrintfW(szLog,
-	//	std::size(szLog),
-	//	L"IniConfig : strNIC=%s",
-	//	m_IniConfig.strNIC.c_str());
-	//Log(szLog);
 
 	::StringCchPrintfW(szLog,
 		std::size(szLog),
