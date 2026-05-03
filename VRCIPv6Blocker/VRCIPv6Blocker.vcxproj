@@ -140,6 +140,7 @@
     <ClInclude Include="src\blocklist.h" />
     <ClInclude Include="src\ComInitializer.h" />
     <ClInclude Include="src\config.h" />
+    <ClInclude Include="src\crashdump.h" />
     <ClInclude Include="src\defines.h" />
     <ClInclude Include="src\DialogBase.h" />
     <ClInclude Include="src\FileLogger.h" />

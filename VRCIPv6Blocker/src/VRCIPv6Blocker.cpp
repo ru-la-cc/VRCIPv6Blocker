@@ -1,5 +1,4 @@
 ﻿#include "VRCIPv6Blocker.h"
-#include "WinFirewall.h"
 #include "YDKWinUtils.h"
 #include "SubClassEditHandler.h"
 #include "ProcessWaiter.h"
@@ -7,8 +6,6 @@
 #include <CommDlg.h>
 #include <Shlwapi.h>
 #include <strsafe.h>
-#include <tlhelp32.h>
-#include <process.h>
 #include <pathcch.h>
 #include <cerrno>
 #include "win32except.h"
@@ -18,8 +15,7 @@
 #pragma comment(lib, "pathcch.lib")
 
 VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
-    // デストラクタ（コンストラクタはprivateだから↓に書いてる）
-	//::DeleteCriticalSection(&m_tidCs);
+    // コンストラクタはprivateだから下の方に書いてる
 	::DeleteCriticalSection(&m_wCS);
 
 	if (m_lpArgList != nullptr) {
@@ -29,7 +25,7 @@ VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
 }
 
 bool VRCIPv6BlockerApp::OnInitialize() {
-	// アプリケーション初期化(コンストラクタとOnInitDialogの間の中途半端な立ち位置)
+	// アプリケーション初期化(コンストラクタとOnInitDialogの間の中途半端な位置)
 	return true;
 }
 
@@ -352,7 +348,6 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 	if (m_isAutoRun) m_Logger->Log(L"オートモードで起動しました");
 
 	::InitializeCriticalSection(&m_wCS);
-	//::InitializeCriticalSection(&m_tidCs);
 }
 
 void VRCIPv6BlockerApp::ApplyDialogToConfig() {
@@ -418,31 +413,6 @@ void VRCIPv6BlockerApp::VRCExecuter() {
 	default:
 		::MessageBoxW(m_hWnd, L"起動できませんでした", L"エラー", MB_ICONERROR | MB_OK);
 		break;
-	}
-}
-
-std::wstring VRCIPv6BlockerApp::SerializeGuid(const GUID& guid) {
-	wchar_t buf[64] = {};
-	int len = ::StringFromGUID2(guid, buf, std::size(buf));
-	return (len > 0) ? std::wstring(buf) : L"";
-}
-
-bool VRCIPv6BlockerApp::DeserializeGuid(LPCWSTR lpStr, GUID& guid) {
-	HRESULT hr = ::CLSIDFromString(lpStr, &guid);
-	return SUCCEEDED(hr);
-}
-
-void VRCIPv6BlockerApp::WriteGuid(LPCWSTR lpGuid) {
-	auto& config = m_Config.GetConfig();
-	config.strNIC = lpGuid;
-	if(lpGuid == nullptr || config.uFirewallBlock == BST_CHECKED) config.uRevert = BST_UNCHECKED;
-	WCHAR szChk[32];
-	::swprintf_s(szChk, L"%u", config.uRevert);
-	if(!::WritePrivateProfileStringW(APP_NAME, IK_REVERT, szChk, m_IniFile.c_str())) {
-		m_Logger->LogError(L"IPv6設定書込みに失敗しました");
-	}
-	if(!::WritePrivateProfileStringW(APP_NAME, IK_NIC, lpGuid, m_IniFile.c_str())){
-		m_Logger->LogError(L"ネットワークアダプタ情報の書込みに失敗しました");
 	}
 }
 

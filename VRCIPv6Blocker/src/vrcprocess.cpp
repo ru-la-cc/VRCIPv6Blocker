@@ -1,7 +1,6 @@
 ﻿#include "vrcprocess.h"
 #include "YDKWinUtils.h"
 #include <tlhelp32.h>
-#include <strsafe.h>
 #include "UserProcessLauncher.h"
 #include "ScopedHandle.h"
 #include "ComInitializer.h"
