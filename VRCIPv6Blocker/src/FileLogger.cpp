@@ -142,6 +142,7 @@ namespace ydk {
 	WCHAR  FileLogger::m_szLogBufW[MAX_LOG_SIZE] = {};
 
 	bool FileLogger::Format(LogType logtype, const LPCWSTR fmtmsg, va_list args) noexcept {
+		CSLock lock(m_criticalSection);
 		bool result = _vsnwprintf_s(m_szLogBufW, std::size(m_szLogBufW), _TRUNCATE, fmtmsg, args) != -1;
 		return result && WriteLog(logtype, m_szLogBufW);
 	}

@@ -21,6 +21,10 @@ namespace ydk {
 		Error_AppName,
 		Error_NotFound,
 		Error_AddRule,
+		Error_AccessDenied,
+		Error_InvalidArg,
+		Error_OutOfMemory,
+		Error_InvalidPointer,
 		Error_Unknown
 	};
 
@@ -41,6 +45,10 @@ namespace ydk {
 			case FWSetterResult::Error_AppName:         return L"Error_AppName";
 			case FWSetterResult::Error_NotFound:        return L"Error_NotFound";
 			case FWSetterResult::Error_AddRule:         return L"Error_AddRule";
+			case FWSetterResult::Error_AccessDenied:    return L"Error_AccessDenied";
+			case FWSetterResult::Error_InvalidArg:      return L"Error_InvalidArg";
+			case FWSetterResult::Error_OutOfMemory:     return L"Error_OutOfMemory";
+			case FWSetterResult::Error_InvalidPointer:  return L"Error_InvalidPointer";
 			case FWSetterResult::Error_Unknown:         return L"Error_Unknown";
 			default:                                    return L"";
 		}

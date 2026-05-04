@@ -164,7 +164,16 @@ namespace ydk {
 			}
 			return FWSetterResult::Ok;
 		}
-		if (FAILED(hr) && !IsNotFound(hr)) { SetHr(hr, hResult); return FWSetterResult::Error_NotFound; }
+		if (FAILED(hr) && !IsNotFound(hr)) {
+			SetHr(hr, hResult);
+			switch (hr) {
+				case E_ACCESSDENIED: return FWSetterResult::Error_AccessDenied;
+				case E_INVALIDARG: return FWSetterResult::Error_InvalidArg;
+				case E_OUTOFMEMORY: return FWSetterResult::Error_OutOfMemory;
+				case E_POINTER: return FWSetterResult::Error_InvalidPointer;
+			}
+			return FWSetterResult::Error_Unknown;
+		}
 
 		// 新規作成
 		rule.Release();
