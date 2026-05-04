@@ -133,7 +133,7 @@ bool RuleController::RestoreIPv6() {
 		return true;
 	}
 	else {
-		m_Logger->LogFormat(ydk::LogType::Error, L"IPv6の設定を復元に失敗しました GUID=%s", SerializeGuid(m_AdapterKey.ifGuid).c_str());
+		m_Logger->LogFormat(ydk::LogType::Error, L"IPv6の設定の復元に失敗しました GUID=%s", SerializeGuid(m_AdapterKey.ifGuid).c_str());
 	}
 	return false;
 }

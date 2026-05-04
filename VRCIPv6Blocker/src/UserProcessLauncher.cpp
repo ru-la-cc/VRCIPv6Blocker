@@ -66,7 +66,18 @@ namespace ydk {
 		if (!::AdjustTokenPrivileges(tok.get(), FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
 			if (logger) {
 				logger->LogFormat(ydk::LogType::Error,
-					L"アクセス トークンの特権を有効にできません : %s",
+					L"アクセストークンの特権を有効にできません : %s",
+					ydk::GetErrorMessage(::GetLastError()).c_str()
+				);
+			}
+			return false;
+		}
+		DWORD err = ::GetLastError();
+		if (err != ERROR_SUCCESS) {
+			if (logger) {
+				logger->LogFormat(ydk::LogType::Warning,
+					L"[%s] : %s",
+					name,
 					ydk::GetErrorMessage(::GetLastError()).c_str()
 				);
 			}
