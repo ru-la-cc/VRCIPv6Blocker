@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "YDKWinUtils.h"
 #include "UserProcessLauncher.h"
 #include "ComInitializer.h"
 
@@ -39,15 +40,39 @@ namespace ydk {
 	inline void SetErrorOrDefault(DWORD defErr) { DWORD e = GetLastError(); SetLastError(e ? e : defErr); }
 
 	// ---- privilege helper ----
-	static bool EnablePrivilege(LPCWSTR name) {
+	static bool EnablePrivilege(LPCWSTR name, ILogger<WCHAR>* logger) {
 		HANDLE hTok = nullptr;
-		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hTok)) return false;
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hTok)) {
+			if (logger) {
+				logger->LogFormat(ydk::LogType::Error,
+					L"アクセストークンのオープンに失敗 : %s",
+					ydk::GetErrorMessage(::GetLastError()).c_str()
+				);
+			}
+			return false;
+		}
 		unique_handle tok(hTok);
 		LUID luid{};
-		if (!LookupPrivilegeValueW(nullptr, name, &luid)) return false;
+		if (!LookupPrivilegeValueW(nullptr, name, &luid)) {
+			if (logger) {
+				logger->LogFormat(ydk::LogType::Error,
+					L"LUIDの取得に失敗 : %s",
+					ydk::GetErrorMessage(::GetLastError()).c_str()
+				);
+			}
+			return false;
+		}
 		TOKEN_PRIVILEGES tp{}; tp.PrivilegeCount = 1; tp.Privileges[0].Luid = luid; tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-		AdjustTokenPrivileges(tok.get(), FALSE, &tp, sizeof(tp), nullptr, nullptr);
-		return GetLastError() == ERROR_SUCCESS;
+		if (!::AdjustTokenPrivileges(tok.get(), FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
+			if (logger) {
+				logger->LogFormat(ydk::LogType::Error,
+					L"アクセス トークンの特権を有効にできません : %s",
+					ydk::GetErrorMessage(::GetLastError()).c_str()
+				);
+			}
+			return false;
+		}
+		return true;
 	}
 
 	// ---- string utils ----
@@ -462,15 +487,15 @@ namespace ydk {
 	}
 
 	// 戻り値: 起動したプロセスの PID（取得不能/既存委譲時は 0）。失敗時 0。
-	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath, bool isComInitialize)
+	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath, bool isComInitialize, ILogger<WCHAR>* logger)
 	{
 		if (!ValidateInputPath(lpExePath)) return 0;
 
 		auto com = isComInitialize ? std::make_unique<ComInitializer>() : nullptr;
 
-		EnablePrivilege(SE_INCREASE_QUOTA_NAME);
-		EnablePrivilege(SE_ASSIGNPRIMARYTOKEN_NAME);
-		EnablePrivilege(SE_IMPERSONATE_NAME);
+		EnablePrivilege(SE_INCREASE_QUOTA_NAME, logger);
+		EnablePrivilege(SE_ASSIGNPRIMARYTOKEN_NAME, logger);
+		EnablePrivilege(SE_IMPERSONATE_NAME, logger);
 
 		std::wstring src = TrimSurroundingQuotes(lpExePath);
 		std::wstring ext = ext_of(src);
@@ -495,7 +520,12 @@ namespace ydk {
 
 			if (mode == UrlResolveMode::CommandLine) {
 				void* envBlockRaw = nullptr;
-				CreateEnvironmentBlock(&envBlockRaw, hUserPrimary.get(), FALSE);
+				if (!::CreateEnvironmentBlock(&envBlockRaw, hUserPrimary.get(), FALSE)) {
+					if (logger) {
+						logger->LogFormat(ydk::LogType::Error,
+							L"環境変数の取得に失敗 - 1: %s", ydk::GetErrorMessage(::GetLastError()).c_str());
+					}
+				}
 				unique_env envBlock(envBlockRaw);
 
 				STARTUPINFOW si{}; si.cb = sizeof(si);
@@ -569,7 +599,13 @@ namespace ydk {
 		}
 
 		void* envBlockRaw = nullptr;
-		if (!CreateEnvironmentBlock(&envBlockRaw, hUserPrimary.get(), FALSE)) envBlockRaw = nullptr;
+		if (!CreateEnvironmentBlock(&envBlockRaw, hUserPrimary.get(), FALSE)) {
+			envBlockRaw = nullptr;
+			if (logger) {
+				logger->LogFormat(ydk::LogType::Error,
+					L"環境変数の取得に失敗 - 2: %s", ydk::GetErrorMessage(::GetLastError()).c_str());
+			}
+		}
 		unique_env envBlock(envBlockRaw);
 
 		STARTUPINFOW si{}; si.cb = sizeof(si);

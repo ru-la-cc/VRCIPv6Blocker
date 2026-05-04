@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <windows.h>
 #include <string>
+#include "ILogger.h"
 
 namespace ydk{
 	// .url の解決モード
@@ -22,7 +23,7 @@ namespace ydk{
 		std::wstring& workDir,
 		int& showCmd);
 
-	// .url の解決
+	// .url の解決（実験用で実際は使用していない）
 	// 戻り値:
 	//   CommandLine: exe, fullCmd, workDir, showCmd が有効 → CreateProcess* で直接起動可能
 	//   DelegateToShell: ShellExecute に委譲すべき（既存の 'start' フォールバック等）
@@ -36,5 +37,5 @@ namespace ydk{
 		int& showCmd);
 
 	bool IsWhiteListFile(LPCWSTR lpFileName);
-	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath, bool isComInitialize = false);
+	DWORD ShellExecuteWithLoginUser(LPCWSTR lpExePath, bool isComInitialize = false, ILogger<WCHAR>* logger = nullptr);
 }

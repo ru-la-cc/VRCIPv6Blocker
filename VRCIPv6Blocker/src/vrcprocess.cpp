@@ -43,19 +43,19 @@ bool VRCProcess::FindProcess() {
 }
 
 DWORD VRCProcess::GetProcessID() {
-	CSLock lock(m_cs);
+	ydk::CSLock lock(m_cs);
 	if (m_hProcess && ::WaitForSingleObject(m_hProcess, 0) == WAIT_TIMEOUT) return m_ProcessID;
 	FindProcess();
 	return m_ProcessID;
 }
 
 int VRCProcess::UserExecute(LPCWSTR lpExePath) {
-	CSLock lock(m_execute_cs);
+	ydk::CSLock lock(m_execute_cs);
 	if (GetProcessID()) {
 		m_Logger->LogError(L"既に起動してるので起動しないでほしい");
 		return 0;
 	}
-	auto pid = ydk::ShellExecuteWithLoginUser(lpExePath);
+	auto pid = ydk::ShellExecuteWithLoginUser(lpExePath, false, m_Logger);
 	if (!pid) {
 		m_Logger->LogError(L"起動できませんでした");
 		return -1;
@@ -92,12 +92,12 @@ void VRCProcess::VRCMonitorThread(MonitorParams* params) {
 		}
 
 		if (isRunning) {
-			CSLock lock(params->cs);
+			ydk::CSLock lock(params->cs);
 			if (!params->waiter->has_value()) {
 				params->waiter->emplace(VRCWaitThread, params->vrcp, params->vrcp->m_Logger, params->vrcexit, params->stopflag);
 			}
 		} else {
-			CSLock lock(params->cs);
+			ydk::CSLock lock(params->cs);
 			if (params->waiter->has_value()) {
 				params->waiter->value().join();
 				params->waiter->reset();
@@ -110,7 +110,7 @@ void VRCProcess::VRCMonitorThread(MonitorParams* params) {
 	}
 
 	// 待機スレッドが終わってなかったときのやつ
-	CSLock lock(params->cs);
+	ydk::CSLock lock(params->cs);
 	if (params->waiter->has_value()) {
 		params->vrcp->m_Logger->Log(L"待機スレッドの完了を待っています...");
 		params->waiter->value().join();
