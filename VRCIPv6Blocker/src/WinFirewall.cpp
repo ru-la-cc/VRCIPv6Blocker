@@ -92,15 +92,15 @@ namespace ydk {
 
 	// 2) 登録（同名があれば更新）。成功= true / 失敗= false
 	//    *hResult = S_OK（追加/更新どちらも）/ 失敗コード
-	bool RegisterFirewallRule(
+	FWSetterResult RegisterFirewallRule(
 		LPCWSTR ruleName,
 		const std::vector<std::wstring>& remoteAddresses,
 		HRESULT* hResult,
 		LPCWSTR lpDescription,
 		LPCWSTR appExePath // 追加: 対象 exe のフルパス（null なら全プロセス）
 	) {
-		if (!IsValidRuleName(std::wstring(ruleName))) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return false; }
-		if (remoteAddresses.empty()) { SetHr(E_INVALIDARG, hResult); return false; }
+		if (!IsValidRuleName(std::wstring(ruleName))) { SetHr(HRESULT_FROM_WIN32(ERROR_INVALID_NAME), hResult); return FWSetterResult::Error_Name; }
+		if (remoteAddresses.empty()) { SetHr(E_INVALIDARG, hResult); return FWSetterResult::Error_RemoteAddresses; }
 
 		// 絶対パスである保険的な検証とか
 		std::wstring exe;
@@ -109,68 +109,122 @@ namespace ydk {
 			DWORD n = ::GetFullPathNameW(appExePath, (DWORD)std::size(buf), buf, nullptr);
 			if (n == 0 || n >= std::size(buf) || GetFileAttributesW(buf) == INVALID_FILE_ATTRIBUTES) {
 				SetHr(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND), hResult);
-				return false;
+				return FWSetterResult::Error_Path;
 			}
 			exe.assign(buf, n);
 		}
 
 		const std::wstring joined = JoinComma(remoteAddresses);
-		if (joined.empty()) { SetHr(E_INVALIDARG, hResult); return false; }
+		if (joined.empty()) { SetHr(E_INVALIDARG, hResult); return FWSetterResult::Error_RemoteAddresses; }
 
 		CComPtr<INetFwRules> rules;
 		HRESULT hr = GetRules(&rules);
-		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
+		if (FAILED(hr)) { SetHr(hr, hResult); return FWSetterResult::Error_GetRules; }
 
 		CComPtr<INetFwRule> rule;
 		hr = rules->Item(CComBSTR(ruleName), &rule);
 		if (SUCCEEDED(hr) && rule) {
 			// 既存更新
-			if (FAILED(rule->put_Direction(NET_FW_RULE_DIR_OUT)) ||
-				FAILED(rule->put_Action(NET_FW_ACTION_BLOCK)) ||
-				FAILED(rule->put_Protocol(NET_FW_IP_PROTOCOL_ANY)) ||
-				FAILED(rule->put_Enabled(VARIANT_TRUE)) ||
-				FAILED(rule->put_Profiles(NET_FW_PROFILE2_ALL)) ||
-				FAILED(rule->put_RemoteAddresses(CComBSTR(joined.c_str())))) {
-				SetHr(E_FAIL, hResult); return false;
+			if (FAILED(hr = rule->put_Direction(NET_FW_RULE_DIR_OUT))) {
+				SetHr(hr, hResult);
+				return FWSetterResult::Error_Direction;
+			}
+			if (FAILED(hr = rule->put_Action(NET_FW_ACTION_BLOCK))) {
+				SetHr(hr, hResult);
+				return FWSetterResult::Error_Action;
+			}
+			if (FAILED(hr = rule->put_Protocol(NET_FW_IP_PROTOCOL_ANY))) {
+				SetHr(hr, hResult);
+				return FWSetterResult::Error_Protocol;
+			}
+			if (FAILED(hr = rule->put_Enabled(VARIANT_TRUE))) {
+				SetHr(hr, hResult);
+				return FWSetterResult::Error_Enabled;
+			}
+			if (FAILED(hr = rule->put_Profiles(NET_FW_PROFILE2_ALL))) {
+				SetHr(hr, hResult);
+				return FWSetterResult::Error_Profiles;
+			}
+			if (FAILED(hr = rule->put_RemoteAddresses(CComBSTR(joined.c_str())))) {
+				SetHr(hr, hResult);
+				return FWSetterResult::Error_RemoteAddresses;
 			}
 			// 対象のexe指定されたら...
 			if (!exe.empty()) {
 				if (FAILED(rule->put_ApplicationName(CComBSTR(exe.c_str())))) {
-					SetHr(E_FAIL, hResult); return false;
+					SetHr(E_FAIL, hResult);
+					return FWSetterResult::Error_AppName;
 				}
 			}
 			else {
-				rule->put_ApplicationName(nullptr);
+				if (FAILED(hr = rule->put_ApplicationName(nullptr))) {
+					SetHr(hr, hResult);
+					return FWSetterResult::Error_AppName;
+				}
 			}
-			SetHr(S_OK, hResult); return true;
+			return FWSetterResult::Ok;
 		}
-		if (FAILED(hr) && !IsNotFound(hr)) { SetHr(hr, hResult); return false; }
+		if (FAILED(hr) && !IsNotFound(hr)) {
+			SetHr(hr, hResult);
+			switch (hr) {
+				case E_ACCESSDENIED: return FWSetterResult::Error_AccessDenied;
+				case E_INVALIDARG: return FWSetterResult::Error_InvalidArg;
+				case E_OUTOFMEMORY: return FWSetterResult::Error_OutOfMemory;
+				case E_POINTER: return FWSetterResult::Error_InvalidPointer;
+			}
+			return FWSetterResult::Error_Unknown;
+		}
 
 		// 新規作成
 		rule.Release();
 		hr = rule.CoCreateInstance(__uuidof(NetFwRule));
-		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
-
-		if (FAILED(rule->put_Name(CComBSTR(ruleName))) ||
-			FAILED(rule->put_Description(CComBSTR(lpDescription))) ||
-			FAILED(rule->put_Direction(NET_FW_RULE_DIR_OUT)) ||
-			FAILED(rule->put_Action(NET_FW_ACTION_BLOCK)) ||
-			FAILED(rule->put_Protocol(NET_FW_IP_PROTOCOL_ANY)) ||
-			FAILED(rule->put_Enabled(VARIANT_TRUE)) ||
-			FAILED(rule->put_Profiles(NET_FW_PROFILE2_ALL)) ||
-			FAILED(rule->put_RemoteAddresses(CComBSTR(joined.c_str())))) {
-			SetHr(E_FAIL, hResult); return false;
+		if (FAILED(hr)) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Create;
+		}
+		if (FAILED(hr = rule->put_Name(CComBSTR(ruleName)))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Name;
+		}
+		if (FAILED(hr = rule->put_Description(CComBSTR(lpDescription)))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Description;
+		}
+		if (FAILED(hr = rule->put_Direction(NET_FW_RULE_DIR_OUT))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Direction;
+		}
+		if (FAILED(hr = rule->put_Action(NET_FW_ACTION_BLOCK))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Action;
+		}
+		if (FAILED(hr = rule->put_Protocol(NET_FW_IP_PROTOCOL_ANY))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Protocol;
+		}
+		if (FAILED(hr = rule->put_Enabled(VARIANT_TRUE))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Enabled;
+		}
+		if (FAILED(hr = rule->put_Profiles(NET_FW_PROFILE2_ALL))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_Profiles;
+		}
+		if (FAILED(hr = rule->put_RemoteAddresses(CComBSTR(joined.c_str())))) {
+			SetHr(hr, hResult);
+			return FWSetterResult::Error_RemoteAddresses;
 		}
 		if (appExePath && *appExePath) {
-			if (FAILED(rule->put_ApplicationName(CComBSTR(exe.c_str())))) {
-				SetHr(E_FAIL, hResult); return false;
+			if (FAILED(hr = rule->put_ApplicationName(CComBSTR(exe.c_str())))) {
+				SetHr(E_FAIL, hResult);
+				return FWSetterResult::Error_AppName;
 			}
 		}
 
 		hr = rules->Add(rule);
-		if (FAILED(hr)) { SetHr(hr, hResult); return false; }
-		SetHr(S_OK, hResult);
-		return true;
+		SetHr(hr, hResult);
+		if (FAILED(hr)) return FWSetterResult::Error_AddRule;
+		return FWSetterResult::Ok;
 	}
 
 	// 3) 削除。見つからなくても呼び出し成功なら true、*hResult=S_FALSE で区別

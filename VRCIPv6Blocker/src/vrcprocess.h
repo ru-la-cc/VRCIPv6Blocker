@@ -7,16 +7,6 @@
 #include <functional>
 #include "ILogger.h"
 
-struct CSLock {
-	CRITICAL_SECTION& rcs;
-	CSLock(CRITICAL_SECTION& cs) : rcs(cs) { ::EnterCriticalSection(&cs); }
-	~CSLock() { ::LeaveCriticalSection(&rcs); }
-	CSLock(const CSLock&) = delete;
-	CSLock& operator=(const CSLock&) = delete;
-	CSLock(CSLock&&) = delete;
-	CSLock& operator=(CSLock&&) = delete;
-};
-
 class VRCProcess final {
 public:
 	struct MonitorParams {

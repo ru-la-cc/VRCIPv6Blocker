@@ -2,6 +2,8 @@
 #define __INC_YDK_ILOGGER_HPP__
 #include <concepts>
 #include <type_traits>
+#include <cstdarg>
+
 
 // インターフェース的な何か
 namespace ydk {
@@ -25,6 +27,15 @@ namespace ydk {
 		virtual bool Log(const TChar* message) = 0;
 		virtual bool LogWarning(const TChar* message) = 0;
 		virtual bool LogError(const TChar* message) = 0;
+		bool LogFormat(LogType logtype, const TChar* fmtmsg, ...) {
+			va_list args;
+			va_start(args, fmtmsg);
+			bool result = Format(logtype, fmtmsg, args);
+			va_end(args);
+			return result;
+		}
+	protected:
+		virtual bool Format(LogType logtype, const TChar* fmtmsg, va_list args) = 0;
 	};
 
 	template <typename TChar>

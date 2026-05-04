@@ -68,15 +68,19 @@ bool RuleController::ApplyFirewallRules() {
 	m_LockInfo.kind = LOCK_KIND::FW;
 	m_LockInfo.status = m_DefaultRuleExists ? LOCK_DEFAULT::ON : LOCK_DEFAULT::OFF;
 	DWORD dwAttr = ::GetFileAttributesW(m_conf.strVRCFullPath.c_str());
-	if (!ydk::RegisterFirewallRule(
-		REGISTER_NAME,
-		m_blockList,
-		nullptr,
-		L"VRChat IPv6 Block Rule",
-		(m_conf.uOnlyVRC == BST_UNCHECKED || dwAttr == INVALID_FILE_ATTRIBUTES || (dwAttr & FILE_ATTRIBUTE_DIRECTORY)) ?
-		nullptr : m_conf.strVRCFullPath.c_str())
-		) {
-		m_Logger->LogError(L"Firewallのルール登録に失敗");
+	auto result =
+		ydk::RegisterFirewallRule(
+			REGISTER_NAME,
+			m_blockList,
+			nullptr,
+			L"VRChat IPv6 Block Rule",
+			(m_conf.uOnlyVRC == BST_UNCHECKED || dwAttr == INVALID_FILE_ATTRIBUTES || (dwAttr & FILE_ATTRIBUTE_DIRECTORY)) ?
+			nullptr : m_conf.strVRCFullPath.c_str()
+		);
+
+	if (result != ydk::FWSetterResult::Ok
+	) {
+		m_Logger->LogFormat(ydk::LogType::Error, L"Firewallのルール登録に失敗 : %s", ydk::FWSetterResultString(result));
 		return false;
 	}
 	else {
@@ -93,6 +97,8 @@ bool RuleController::DisableIPv6() {
 	}
 	m_LockInfo.kind = LOCK_KIND::Adapter;
 	m_LockInfo.status = m_DefaultIPv6Enabled ? LOCK_DEFAULT::ON : LOCK_DEFAULT::OFF;
+	m_LockInfo.ifIndex = m_AdapterKey.ifIndex;
+	m_LockInfo.adapterGuid = m_AdapterKey.ifGuid;
 
 	if (EnableIPv6(false)) {
 		m_LockFile->Lock(reinterpret_cast<LPCBYTE>(&m_LockInfo), sizeof(m_LockInfo));
@@ -119,13 +125,15 @@ bool RuleController::RestoreFirewallRule() {
 bool RuleController::RestoreIPv6() {
 	m_LockInfo.kind = LOCK_KIND::Adapter;
 	m_LockInfo.status = m_DefaultIPv6Enabled ? LOCK_DEFAULT::ON : LOCK_DEFAULT::OFF;
+	m_AdapterKey.ifIndex = m_LockInfo.ifIndex;
+	m_AdapterKey.ifGuid = m_LockInfo.adapterGuid;
 	if (EnableIPv6(m_DefaultIPv6Enabled)) {
-		m_Logger->Log(L"IPv6の設定を復元しました");
+		m_Logger->LogFormat(ydk::LogType::Info, L"IPv6の設定を復元しました GUID=%s", SerializeGuid(m_AdapterKey.ifGuid).c_str());
 		m_LockFile->Cleanup();
 		return true;
 	}
 	else {
-		m_Logger->LogError(L"IPv6の設定の復元に失敗しました");
+		m_Logger->LogFormat(ydk::LogType::Error, L"IPv6の設定の復元に失敗しました GUID=%s", SerializeGuid(m_AdapterKey.ifGuid).c_str());
 	}
 	return false;
 }
@@ -140,7 +148,7 @@ bool RuleController::DeleteFirewallRule() {
 			m_Logger->LogWarning(L"削除しようとしていたFirewallの対象ルールはありませんので削除したことにしておきます");
 		}
 		else {
-			m_Logger->LogError(L"ここには来ないはずだが...");
+			m_Logger->LogFormat(ydk::LogType::Error, L"RemoveFirewallRule HRESULT=%ld(0x%08x)", hr, hr);
 			return false;
 		}
 		m_IsExistFirewallRule = false;
