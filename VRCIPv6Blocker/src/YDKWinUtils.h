@@ -29,4 +29,15 @@ namespace ydk {
 		LPCWSTR lpIconFile = nullptr, int nIconIndex = 0, LPCWSTR lpArguments = nullptr,
 		LPCWSTR lpDescription = nullptr, int nShow = SW_SHOWNORMAL, WORD wHotkey = 0);
 	bool GetKnownFolderPath(std::wstring& path, KNOWNFOLDERID folderId = FOLDERID_Desktop);
+
+	// ロック用簡易クリティカルセクション(Initialize/Deleteはやらない)
+	struct CSLock {
+		CRITICAL_SECTION& rcs;
+		CSLock(CRITICAL_SECTION& cs) : rcs(cs) { ::EnterCriticalSection(&cs); }
+		~CSLock() { ::LeaveCriticalSection(&rcs); }
+		CSLock(const CSLock&) = delete;
+		CSLock& operator=(const CSLock&) = delete;
+		CSLock(CSLock&&) = delete;
+		CSLock& operator=(CSLock&&) = delete;
+	};
 }
