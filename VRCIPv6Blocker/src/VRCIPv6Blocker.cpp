@@ -23,7 +23,7 @@ VRCIPv6BlockerApp::~VRCIPv6BlockerApp() {
 	if (m_lpArgList != nullptr) {
 		::LocalFree(m_lpArgList);
 	}
-	m_Logger->Log(L"アプリを終了します");
+	m_Logger->LogFormat(ydk::LogType::Info, L"%sを終了します", APP_NAME);
 }
 
 bool VRCIPv6BlockerApp::OnInitialize() {
@@ -43,14 +43,8 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 		m_pEditPathHandler = std::make_unique<SubclassEditHandler>(::GetDlgItem(m_hWnd, IDC_EDIT_LINK));
 		m_pEditPath = std::make_unique<ydk::SubclassView>(m_pEditPathHandler.get());
 		m_TaskScheduler = std::make_unique<IPv6BlockScheduler>(m_Logger);
-		WORD v1, v2, v3, v4;
-		ydk::GetAppVersion(&v1, &v2, &v3, &v4);
-		m_Version = (static_cast<unsigned __int64>(v1) << 48) |
-			(static_cast<unsigned __int64>(v2) << 32) |
-			(static_cast<unsigned __int64>(v3) << 16) |
-			(static_cast<unsigned __int64>(v4) << 0);
 		WCHAR szVer[64];
-		::swprintf_s(szVer, L"Ver. %u.%u.%u(%u)", v1, v2, v3, v4);
+		::swprintf_s(szVer, L"Ver. %u.%u.%u", m_v1, m_v2, m_v3);
 		::SetDlgItemTextW(m_hWnd, IDC_STATIC_VERSION, szVer);
 
 		if (!m_BlockList.LoadFromFile((m_ModulePath + BLOCK_LIST_FILE).c_str(), m_Logger)) {
@@ -253,7 +247,7 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 		return ydk::DialogAppBase::OnClose(hDlg);
 	}
 	if (m_isAutoRun){
-		CSLock lock(m_wCS);
+		ydk::CSLock lock(m_wCS);
 		if (m_Waiter.has_value() &&
 			::WaitForSingleObject(m_Waiter.value().native_handle(), 0) == WAIT_TIMEOUT) {
 			// VRChat起動中なのに閉じようとしたら一応警告を出す
@@ -332,8 +326,12 @@ VRCIPv6BlockerApp* VRCIPv6BlockerApp::Instance() {
 VRCIPv6BlockerApp::VRCIPv6BlockerApp()
     : ydk::DialogAppBase() {
     // コンストラクタ
-	m_Version = 0;
-    m_ModulePath = ydk::GetModuleDir();
+	ydk::GetAppVersion(&m_v1, &m_v2, &m_v3, &m_v4);
+	m_Version = (static_cast<unsigned __int64>(m_v1) << 48) |
+		(static_cast<unsigned __int64>(m_v2) << 32) |
+		(static_cast<unsigned __int64>(m_v3) << 16) |
+		(static_cast<unsigned __int64>(m_v4) << 0);
+	m_ModulePath = ydk::GetModuleDir();
 	m_Config.SetFilePath((ydk::GetModuleDir() + APP_NAME + L".ini").c_str());
 	m_IniFile = m_ModulePath;
 	m_IniFile += APP_NAME;
@@ -341,7 +339,7 @@ VRCIPv6BlockerApp::VRCIPv6BlockerApp()
 	static auto logger = ydk::FileLogger((m_ModulePath + LOGFILENAME).c_str());
     m_Logger = &logger;
 	m_Config.SetLogger(m_Logger);
-	m_Logger->Log(L"アプリを起動します");
+	m_Logger->LogFormat(ydk::LogType::Info, L"%s Version %u.%u.%u(%u)", APP_NAME, m_v1, m_v2, m_v3, m_v4);
 
 	m_lpArgList = CommandLineToArgvW(GetCommandLineW(), &m_argc);
 	if (m_lpArgList == nullptr) {

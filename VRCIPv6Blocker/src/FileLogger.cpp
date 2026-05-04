@@ -5,46 +5,41 @@
 #include <cstring>
 
 namespace ydk {
-	FileLogger::FileLogger(LPCWSTR filePath, bool isAppend, bool isAutoFlush) {
+	FileLogger::FileLogger(LPCWSTR filePath, bool isAppend, bool isAutoFlush) noexcept {
 		::InitializeCriticalSection(&m_criticalSection);
-		::InitializeCriticalSection(&m_setterCritical);
 		m_isAppend = isAppend;
 		m_isAutoFlush = isAutoFlush;
 		m_hResultFileName = ::StringCchCopyW(m_filePath, std::size(m_filePath), filePath);
 		Open();
 	}
 
-	FileLogger::~FileLogger() {
+	FileLogger::~FileLogger() noexcept {
 		if(m_hFile != INVALID_HANDLE_VALUE) Close();
-		::DeleteCriticalSection(&m_setterCritical);
 		::DeleteCriticalSection(&m_criticalSection);
 	}
 
-	bool FileLogger::Log(LPCWSTR message){
+	bool FileLogger::Log(LPCWSTR message) noexcept {
 		bool result;
-		::EnterCriticalSection(&m_criticalSection);
+		CSLock lock(m_criticalSection);
 		result = WriteLog(LogType::Info, message);
-		::LeaveCriticalSection(&m_criticalSection);
 		return result;
 	}
 
-	bool FileLogger::LogWarning(LPCWSTR message) {
+	bool FileLogger::LogWarning(LPCWSTR message) noexcept {
 		bool result;
-		::EnterCriticalSection(&m_criticalSection);
+		CSLock lock(m_criticalSection);
 		result = WriteLog(LogType::Warning, message);
-		::LeaveCriticalSection(&m_criticalSection);
 		return result;
 	}
 
-	bool FileLogger::LogError(LPCWSTR message) {
+	bool FileLogger::LogError(LPCWSTR message) noexcept {
 		bool result;
-		::EnterCriticalSection(&m_criticalSection);
+		CSLock lock(m_criticalSection);
 		result = WriteLog(LogType::Error, message);
-		::LeaveCriticalSection(&m_criticalSection);
 		return result;
 	}
 
-	bool FileLogger::Open() {
+	bool FileLogger::Open() noexcept {
 		if (SUCCEEDED(m_hResultFileName)) {
 			m_hFile = ::CreateFileW(m_filePath,
 				GENERIC_WRITE,
@@ -77,9 +72,9 @@ namespace ydk {
 		return true;
 	}
 
-	bool FileLogger::Close() {
+	bool FileLogger::Close() noexcept {
 		bool result;
-		::EnterCriticalSection(&m_criticalSection);
+		CSLock lock(m_criticalSection);
 		if (m_hFile != INVALID_HANDLE_VALUE) {
 			if (::CloseHandle(m_hFile)) {
 				m_hFile = INVALID_HANDLE_VALUE;
@@ -93,7 +88,6 @@ namespace ydk {
 		else {
 			result = false;
 		}
-		::LeaveCriticalSection(&m_criticalSection);
 		return result;
 	}
 
@@ -120,10 +114,9 @@ namespace ydk {
 			SetError(::GetLastError());
 		}
 
-		char szMessage[2048]; // まぁこれだけあれば足りるだろうし...
-		ydk::ToUtf8(lpMessage, szMessage, sizeof(szMessage));
-		for (char* p = szMessage; *p; ++p) {
-			if (*p == '\r' || *p == '\n' || *p == '\t') *p = ' '; // お前ら全部半角スペースになれ
+		ToUtf8(lpMessage, m_szLogBuf, sizeof(m_szLogBuf));
+		for (char* p = m_szLogBuf; *p; ++p) {
+			if (*p == '\r' || *p == '\n' || *p == '\t') *p = ' ';
 		}
 
 		DWORD dwWrite;
@@ -132,8 +125,8 @@ namespace ydk {
 			SetError(::GetLastError());
 			return false;
 		}
-		if (!::WriteFile(m_hFile, szMessage,
-				static_cast<DWORD>(std::strlen(szMessage)), &dwWrite, nullptr)) {
+		if (!::WriteFile(m_hFile, m_szLogBuf,
+				static_cast<DWORD>(std::strlen(m_szLogBuf)), &dwWrite, nullptr)) {
 			SetError(::GetLastError());
 			return false;
 		}
@@ -145,4 +138,12 @@ namespace ydk {
 		return true;
 	}
 
+	char  FileLogger::m_szLogBuf[MAX_LOG_SIZE] = {};
+	WCHAR  FileLogger::m_szLogBufW[MAX_LOG_SIZE] = {};
+
+	bool FileLogger::Format(LogType logtype, const LPCWSTR fmtmsg, va_list args) noexcept {
+		CSLock lock(m_criticalSection);
+		bool result = _vsnwprintf_s(m_szLogBufW, std::size(m_szLogBufW), _TRUNCATE, fmtmsg, args) != -1;
+		return result && WriteLog(logtype, m_szLogBufW);
+	}
 }
