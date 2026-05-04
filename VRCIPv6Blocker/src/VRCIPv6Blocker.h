@@ -40,6 +40,7 @@ private:
 
 	ydk::IFileLogger<WCHAR>* m_Logger;
 	LPWSTR* m_lpArgList;
+	WORD m_v1, m_v2, m_v3, m_v4;
 	unsigned __int64 m_Version;
 
 	static constexpr UINT WM_VRCEXIT = WM_APP + 1;

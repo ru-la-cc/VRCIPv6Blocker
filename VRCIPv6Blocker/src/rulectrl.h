@@ -66,4 +66,15 @@ private:
 	bool m_IsComplete = false;
 	mutable bool m_IsExistFirewallRule = false;
 	mutable bool m_IsEnableIPv6 = false;
+
+	std::wstring SerializeGuid(const GUID& guid) {
+		WCHAR buf[64] = {};
+		int len = ::StringFromGUID2(guid, buf, std::size(buf));
+		return (len > 0) ? std::wstring(buf) : L"";
+	}
+
+	bool DeserializeGuid(LPCWSTR lpStr, GUID& guid) {
+		HRESULT hr = ::CLSIDFromString(lpStr, &guid);
+		return SUCCEEDED(hr);
+	}
 };
