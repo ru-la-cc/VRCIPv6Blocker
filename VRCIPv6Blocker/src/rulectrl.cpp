@@ -78,12 +78,10 @@ bool RuleController::ApplyFirewallRules() {
 			nullptr : m_conf.strVRCFullPath.c_str()
 		);
 
-	if (result != ydk::FWSetterResult::Ok
-	) {
+	if (result != ydk::FWSetterResult::Ok) {
 		m_Logger->LogFormat(ydk::LogType::Error, L"Firewallのルール登録に失敗 : %s", ydk::FWSetterResultString(result));
 		return false;
-	}
-	else {
+	} else {
 		m_LockFile->Lock(reinterpret_cast<LPCBYTE>(&m_LockInfo), sizeof(m_LockInfo));
 		m_IsExistFirewallRule = true;
 		m_Logger->Log(L"Firewallにルールを登録しました");
