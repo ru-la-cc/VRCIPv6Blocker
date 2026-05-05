@@ -84,9 +84,11 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 			&m_Waiter,
 			&m_bStopFlag,
 			[hWnd = m_hWnd, pLogger = m_Logger](LPCWSTR lpText) {
-				if (!::PostMessageW(hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(lpText))) {
+				auto text = std::make_unique<std::wstring>(lpText);
+				if (!::PostMessageW(hWnd, WM_SET_CTRLTEXT, IDC_STATIC_STATUS, reinterpret_cast<LPARAM>(text.get()))) {
 					pLogger->LogError(L"メッセージのポストに失敗 : WM_SET_CTRLTEXT");
 				}
+				text.release();
 			},
 			[hWnd = m_hWnd, pLogger = m_Logger](WPARAM wParam, LPARAM lParam) {
 				if (!::PostMessageW(hWnd, WM_VRCEXIT, wParam, lParam)) {
@@ -272,8 +274,8 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 
 INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
     WPARAM wParam, LPARAM lParam) {
-    switch (message) {
-        // ウインドウメッセージの処理をこの辺に書く予定
+	switch (message) {
+		// ウインドウメッセージの処理をこの辺に書く予定
 	case WM_SHOWWINDOW:
 		if (m_isAutoRun && wParam && m_Config.GetConfig().uMinWindow == BST_CHECKED) {
 			m_Logger->Log(L"最小化します");
@@ -290,7 +292,10 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 		}
 		return TRUE;
 	case WM_SET_CTRLTEXT:
-		::SetDlgItemTextW(m_hWnd, static_cast<int>(wParam), reinterpret_cast<LPCWSTR>(lParam));
+		if(lParam) {
+			std::unique_ptr<std::wstring> text(reinterpret_cast<std::wstring*>(lParam));
+			::SetDlgItemTextW(m_hWnd, static_cast<int>(wParam), reinterpret_cast<LPCWSTR>(text->c_str()));
+		}
 		return TRUE;
 
 	case WM_ERR_MESSAGE:
