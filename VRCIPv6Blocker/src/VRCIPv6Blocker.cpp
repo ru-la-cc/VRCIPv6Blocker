@@ -247,8 +247,7 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 		return ydk::DialogAppBase::OnClose(hDlg);
 	}
 	if (m_isAutoRun){
-		if (m_Waiter.has_value() &&
-			::WaitForSingleObject(m_Waiter.value().native_handle(), 0) == WAIT_TIMEOUT) {
+		if (m_VRCProcess->GetProcessID()) {
 			// VRChat起動中なのに閉じようとしたら一応警告を出す
 			if (::MessageBoxW(m_hWnd,
 				L"VRChatが起動中です！\n"
