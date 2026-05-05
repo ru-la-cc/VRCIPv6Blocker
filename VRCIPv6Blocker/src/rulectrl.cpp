@@ -68,18 +68,19 @@ bool RuleController::ApplyFirewallRules() {
 	m_LockInfo.kind = LOCK_KIND::FW;
 	m_LockInfo.status = m_DefaultRuleExists ? LOCK_DEFAULT::ON : LOCK_DEFAULT::OFF;
 	DWORD dwAttr = ::GetFileAttributesW(m_conf.strVRCFullPath.c_str());
+	HRESULT hr;
 	auto result =
 		ydk::RegisterFirewallRule(
 			REGISTER_NAME,
 			m_blockList,
-			nullptr,
+			&hr,
 			L"VRChat IPv6 Block Rule",
 			(m_conf.uOnlyVRC == BST_UNCHECKED || dwAttr == INVALID_FILE_ATTRIBUTES || (dwAttr & FILE_ATTRIBUTE_DIRECTORY)) ?
 			nullptr : m_conf.strVRCFullPath.c_str()
 		);
 
 	if (result != ydk::FWSetterResult::Ok) {
-		m_Logger->LogFormat(ydk::LogType::Error, L"Firewallのルール登録に失敗 : %s", ydk::FWSetterResultString(result));
+		m_Logger->LogFormat(ydk::LogType::Error, L"Firewallのルール登録に失敗 : %s HRESULT=%ld(0x%08x)", ydk::FWSetterResultString(result), hr, hr);
 		return false;
 	} else {
 		m_LockFile->Lock(reinterpret_cast<LPCBYTE>(&m_LockInfo), sizeof(m_LockInfo));
