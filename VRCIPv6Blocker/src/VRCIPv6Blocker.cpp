@@ -247,7 +247,6 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 		return ydk::DialogAppBase::OnClose(hDlg);
 	}
 	if (m_isAutoRun){
-		ydk::CSLock lock(m_wCS);
 		if (m_Waiter.has_value() &&
 			::WaitForSingleObject(m_Waiter.value().native_handle(), 0) == WAIT_TIMEOUT) {
 			// VRChat起動中なのに閉じようとしたら一応警告を出す
@@ -283,13 +282,7 @@ INT_PTR VRCIPv6BlockerApp::HandleMessage(HWND hDlg, UINT message,
 		}
 		return TRUE;
 	case WM_VRCEXIT:
-		if (wParam) {
-			m_Logger->LogError(L"VRChatが変な終わり方しました？");
-		} else {
-			WCHAR szLog[256];
-			::swprintf_s(szLog, L"VRChatが終了しました(終了コード:%lu)", static_cast<DWORD>(lParam));
-			m_Logger->Log(szLog);
-		}
+		m_Logger->Log(L"VRChatが終了しました");
 		if (!m_isAutoRun) {
 			::PostMessageW(m_hWnd, WM_ENABLE_CONTROL, static_cast<WPARAM>(TRUE), static_cast<LPARAM>(IDC_BUTTON_SAVE));
 		} else if (m_Config.GetConfig().uAutoShutdown == BST_CHECKED) {

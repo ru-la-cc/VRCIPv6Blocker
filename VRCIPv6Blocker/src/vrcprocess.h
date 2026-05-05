@@ -45,10 +45,10 @@ private:
 	CRITICAL_SECTION m_cs;
 	CRITICAL_SECTION m_execute_cs;
 	bool FindProcess();
+	static void Waiter(MonitorParams* params);
 	static void VRCWaitThread(
 		VRCProcess* vrcp,
 		ydk::ILogger<WCHAR>* logger,
-		std::function<void(WPARAM,LPARAM)> VRCExitCallback,
 		std::atomic<bool>* stopflag
 	);
 };

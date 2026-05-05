@@ -52,7 +52,7 @@ DWORD VRCProcess::GetProcessID() {
 int VRCProcess::UserExecute(LPCWSTR lpExePath) {
 	ydk::CSLock lock(m_execute_cs);
 	if (GetProcessID()) {
-		m_Logger->LogError(L"既に起動してるので起動しないでほしい");
+		m_Logger->LogWarning(L"既に起動してるので起動しないでほしい");
 		return 0;
 	}
 	auto pid = ydk::ShellExecuteWithLoginUser(lpExePath, false, m_Logger);
@@ -94,14 +94,10 @@ void VRCProcess::VRCMonitorThread(MonitorParams* params) {
 		if (isRunning) {
 			ydk::CSLock lock(params->cs);
 			if (!params->waiter->has_value()) {
-				params->waiter->emplace(VRCWaitThread, params->vrcp, params->vrcp->m_Logger, params->vrcexit, params->stopflag);
+				params->waiter->emplace(VRCWaitThread, params->vrcp, params->vrcp->m_Logger, params->stopflag);
 			}
 		} else {
-			ydk::CSLock lock(params->cs);
-			if (params->waiter->has_value()) {
-				params->waiter->value().join();
-				params->waiter->reset();
-			}
+			Waiter(params);
 		}
 		for (int i = 0; i < SLEEP_CYCLES; ++i) { // プロセス監視するのは1秒おきくらいでいいと思ってる
 			if (params->stopflag->load(std::memory_order_relaxed)) break;
@@ -109,20 +105,22 @@ void VRCProcess::VRCMonitorThread(MonitorParams* params) {
 		}
 	}
 
-	// 待機スレッドが終わってなかったときのやつ
+	Waiter(params);
+	params->vrcp->m_Logger->Log(L"VRChatのプロセス監視スレッドを終了します");
+}
+void VRCProcess::Waiter(MonitorParams* params) {
 	ydk::CSLock lock(params->cs);
 	if (params->waiter->has_value()) {
 		params->vrcp->m_Logger->Log(L"待機スレッドの完了を待っています...");
 		params->waiter->value().join();
 		params->waiter->reset();
+		params->vrcexit(1, 0);
 	}
-	params->vrcp->m_Logger->Log(L"VRChatのプロセス監視スレッドを終了します");
 }
 
 void VRCProcess::VRCWaitThread(
 	VRCProcess* vrcp,
 	ydk::ILogger<WCHAR>* logger,
-	std::function<void(WPARAM, LPARAM)> VRCExitCallback,
 	std::atomic<bool>* stopflag
 ) {
 	ydk::ComInitializer comInitializer; // 保険
@@ -138,12 +136,5 @@ void VRCProcess::VRCWaitThread(
 	if (!pw.IsValid()) {
 		logger->LogError(L"VRChatのプロセスハンドル開けてないんだが？");
 	}
-	DWORD dwExitCode;
-	auto isSuccess = pw.ExitCode(dwExitCode);
-
-	// ぶいちゃ終わったというコールバック
-	// 終了コードとか何に使う想定だったのかまったく思い出せん
-	VRCExitCallback(static_cast<WPARAM>(!isSuccess), static_cast<LPARAM>(dwExitCode));
-
 	logger->Log(L"VRChatの待機スレッドを終了します");
 }
