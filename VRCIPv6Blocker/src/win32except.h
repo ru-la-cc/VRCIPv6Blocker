@@ -9,7 +9,7 @@ namespace ydk {
 	class Win32Exception final : public std::system_error {
 	public:
 		Win32Exception(DWORD errorCode, LPCWSTR message = nullptr) :
-			std::system_error(errorCode, std::system_category(), To_Multibyte(message)),
+			std::system_error(errorCode, std::system_category(), To_CP932(message)),
 			m_Message(message ? message : GetErrorMessage(errorCode)) {}
 		~Win32Exception() {}
 		LPCWSTR what_w() const noexcept { return m_Message.c_str(); }
@@ -22,7 +22,7 @@ namespace ydk {
 	class YDKException final : public std::runtime_error {
 	public:
 		YDKException(LPCWSTR message = nullptr) :
-			std::runtime_error(To_Multibyte(message)),
+			std::runtime_error(To_CP932(message)),
 			m_Message(message ? message : L"The app crashed") {
 		}
 		~YDKException() {}
