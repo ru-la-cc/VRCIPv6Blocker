@@ -60,6 +60,17 @@ namespace ydk {
 		return result;
 	}
 
+	std::string To_CP932(LPCWSTR message) {
+		if (!message) return std::string();
+		std::string result(::WideCharToMultiByte(CP_ACP, 0, message, -1, nullptr, 0, nullptr, nullptr), '\0');
+		if (!result.size() || !::WideCharToMultiByte(CP_ACP, 0, message, -1, result.data(), static_cast<int>(result.size()), nullptr, nullptr)) {
+			result.clear();
+		} else {
+			result.resize(result.size() - 1); // 基本c_str()で使うから別に削らなくてもいいけど
+		}
+		return result;
+	}
+
 	FILE* OpenReadFile(LPCWSTR lpFileName, bool isCreate) {
 		HANDLE hFile;
 		int fd;
