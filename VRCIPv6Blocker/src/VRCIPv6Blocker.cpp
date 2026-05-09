@@ -263,7 +263,6 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 			L"確認！！",
 			MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES) return TRUE;
 	}
-	//WaitWorker();
 	m_VRCProcess->ShutdownWorker();
 	if (m_isAutoRun) AutoExit();
 	else m_pRule->Cleanup();
