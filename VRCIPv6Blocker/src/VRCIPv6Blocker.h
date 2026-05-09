@@ -65,7 +65,6 @@ private:
 	void VRCExecuter();
 	void AutoStart();
 	void AutoExit();
-	//void WaitWorker();
 	void CreateShortcut();
 	void OnClickMakeLinkButton();
 	void OnClickDeleteTask();

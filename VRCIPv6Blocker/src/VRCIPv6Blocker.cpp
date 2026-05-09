@@ -242,7 +242,6 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 	if (m_Exception) {
-		//WaitWorker();
 		m_VRCProcess->ShutdownWorker();
 		return ydk::DialogAppBase::OnClose(hDlg);
 	}
