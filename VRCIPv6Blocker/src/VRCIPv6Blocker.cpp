@@ -419,7 +419,7 @@ void VRCIPv6BlockerApp::AutoStart() {
 	if (config.uNonBlocking == BST_UNCHECKED) {
 		if (!m_pRule->ApplyBlock(config.uFirewallBlock == BST_CHECKED)) {
 			::MessageBoxW(m_hWnd,
-				L"IPv6ブロックに失敗しました\nブロック前にVRChatが起動していなかったか確認してください", L"エラー",
+				L"IPv6ブロックに失敗しました\nIPv6のブロックなしでVRChatを起動します", L"エラー",
 				MB_ICONERROR | MB_OK);
 		}
 	}

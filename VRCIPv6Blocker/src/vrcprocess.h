@@ -55,7 +55,6 @@ public:
 	}
 	inline void StartWorker() { m_Worker.emplace(VRCMonitorThread, m_Params.get()); }
 	inline void ShutdownWorker() {
-		if (!m_Worker) return;
 		if (m_Worker.has_value()) {
 			m_Params->stopflag->store(true);
 			m_Worker.value().join();
