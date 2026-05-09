@@ -31,11 +31,8 @@ private:
 	std::unique_ptr<VRCProcess> m_VRCProcess;
 	ydk::ComInitializer m_comInitializer;
 	CRITICAL_SECTION m_wCS;
-	//CRITICAL_SECTION m_tidCs;
 	std::unique_ptr<ydk::ISubclassHandler> m_pEditPathHandler;
 	std::unique_ptr<ydk::ISubclassView> m_pEditPath;
-	std::optional<std::thread> m_Worker;
-	std::optional<std::thread> m_Waiter;
 	std::atomic<bool> m_bStopFlag;
 
 	ydk::IFileLogger<WCHAR>* m_Logger;
@@ -68,7 +65,7 @@ private:
 	void VRCExecuter();
 	void AutoStart();
 	void AutoExit();
-	void WaitWorker();
+	//void WaitWorker();
 	void CreateShortcut();
 	void OnClickMakeLinkButton();
 	void OnClickDeleteTask();

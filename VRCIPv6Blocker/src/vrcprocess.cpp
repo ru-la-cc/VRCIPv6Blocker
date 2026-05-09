@@ -69,11 +69,9 @@ int VRCProcess::UserExecute(LPCWSTR lpExePath) {
 void VRCProcess::VRCMonitorThread(MonitorParams* params) {
 	constexpr int SLEEP_CYCLES = 10;
 	constexpr DWORD PROCESS_MONITOR_INTERVAL = 100UL;
-	constexpr LPCWSTR NOVRC_MSG = L"VRChatは起動していません";
 	ydk::ComInitializer comInitializer;
 	params->stopflag->store(false, std::memory_order_relaxed);
 	bool isRunning = false;
-	params->settext(NOVRC_MSG);
 
 	params->vrcp->m_Logger->Log(L"VRChatプロセス監視スレッドの開始");
 	while (!params->stopflag->load(std::memory_order_relaxed)) {
@@ -87,7 +85,7 @@ void VRCProcess::VRCMonitorThread(MonitorParams* params) {
 		else {
 			if (isRunning) {
 				isRunning = false;
-				params->settext(NOVRC_MSG);
+				params->settext(L"VRChat未起動");
 			}
 		}
 
