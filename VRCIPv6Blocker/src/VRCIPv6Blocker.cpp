@@ -32,7 +32,7 @@ bool VRCIPv6BlockerApp::OnInitialize() {
 }
 
 void VRCIPv6BlockerApp::OnShutdown() {
-    // 設定の保存など
+    // 設定の保存など・・・デストラクタでいいんじゃないかなこれ
 }
 
 INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
@@ -66,7 +66,6 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 			m_BlockList.GetBlockList()
 		);
 		ApplyConfigToDialog();
-		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatのプロセスを確認しています...");
 
 		if (m_Config.GetConfig().uNonBlocking == BST_CHECKED) {
 			WCHAR szCaption[64];
@@ -79,9 +78,7 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 		}
 
 		m_VRCProcess = std::make_unique<VRCProcess>(m_Config.GetConfig().strVRCFile.c_str(), m_Logger);
-		static VRCProcess::MonitorParams params{
-			m_VRCProcess.get(),
-			&m_Waiter,
+		m_VRCProcess->MakeParams(
 			&m_bStopFlag,
 			[hWnd = m_hWnd, pLogger = m_Logger](LPCWSTR lpText) {
 				auto text = std::make_unique<std::wstring>(lpText);
@@ -96,8 +93,8 @@ INT_PTR VRCIPv6BlockerApp::OnInitDialog(HWND hDlg) {
 				}
 			},
 			m_wCS
-		};
-		m_Worker.emplace(VRCProcess::VRCMonitorThread, &params);
+		);
+		m_VRCProcess->StartWorker();
 		if (m_pRule->IsRestore()) {
 			if (m_pRule->IsComplete()) {
 				::MessageBox(m_hWnd,
@@ -245,7 +242,7 @@ INT_PTR VRCIPv6BlockerApp::OnCommand(HWND hDlg, WPARAM wParam, LPARAM lParam) {
 
 INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 	if (m_Exception) {
-		WaitWorker();
+		m_VRCProcess->ShutdownWorker();
 		return ydk::DialogAppBase::OnClose(hDlg);
 	}
 	if (m_isAutoRun){
@@ -266,7 +263,7 @@ INT_PTR VRCIPv6BlockerApp::OnClose(HWND hDlg) {
 			L"確認！！",
 			MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES) return TRUE;
 	}
-	WaitWorker();
+	m_VRCProcess->ShutdownWorker();
 	if (m_isAutoRun) AutoExit();
 	else m_pRule->Cleanup();
     return ydk::DialogAppBase::OnClose(hDlg);
@@ -408,22 +405,21 @@ void VRCIPv6BlockerApp::CheckDialogControl() {
 }
 
 void VRCIPv6BlockerApp::VRCExecuter() {
-	switch (m_VRCProcess->UserExecute(m_Config.GetConfig().strExecutePath.c_str())) {
-	case 0:
-		break;
-	case 1:
-		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatの起動待ち...");
-		break;
-	default:
+	::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChatの起動待ち...");
+	if(m_VRCProcess->UserExecute(m_Config.GetConfig().strExecutePath.c_str()) == -1) {
+		::SetDlgItemTextW(m_hWnd, IDC_STATIC_STATUS, L"VRChat未起動");
 		::MessageBoxW(m_hWnd, L"起動できませんでした", L"エラー", MB_ICONERROR | MB_OK);
-		break;
 	}
 }
 
 void VRCIPv6BlockerApp::AutoStart() {
 	auto& config = m_Config.GetConfig();
 	if (config.uNonBlocking == BST_UNCHECKED) {
-		m_pRule->ApplyBlock(config.uFirewallBlock == BST_CHECKED);
+		if (!m_pRule->ApplyBlock(config.uFirewallBlock == BST_CHECKED)) {
+			::MessageBoxW(m_hWnd,
+				L"IPv6ブロックに失敗しました\nIPv6のブロックなしでVRChatを起動します", L"エラー",
+				MB_ICONERROR | MB_OK);
+		}
 	}
 
 	// まぁVRChatは起動しますけどね
@@ -440,14 +436,6 @@ void VRCIPv6BlockerApp::AutoExit() {
 	auto& config = m_Config.GetConfig();
 	if (config.uNonBlocking == BST_UNCHECKED) {
 		m_pRule->Restore(config.uFirewallBlock == BST_CHECKED);
-	}
-}
-
-void VRCIPv6BlockerApp::WaitWorker() {
-	if (m_Worker.has_value()) {
-		m_bStopFlag.store(true);
-		m_Worker.value().join();
-		m_Worker.reset();
 	}
 }
 

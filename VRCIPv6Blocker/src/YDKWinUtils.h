@@ -11,6 +11,7 @@ namespace ydk {
 	int ToUtf8(LPCWSTR lpUtf16, LPSTR lpUtf8, int buflen);
 	int ToUtf16(LPCSTR lpUtf8, LPWSTR lpUtf16, int buflen);
 	std::string To_Multibyte(LPCWSTR message);
+	std::string To_CP932(LPCWSTR message);
 	[[nodiscard]] FILE* OpenReadFile(LPCWSTR lpFileName, bool isCreate = true);
 	[[nodiscard]] FILE* OpenWriteFile(LPCWSTR lpFileName);
 	[[nodiscard]] std::wstring GetErrorMessage(DWORD dwError);
